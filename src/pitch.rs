@@ -10,14 +10,14 @@ pub type UiStateSender = Sender<'static, ThreadModeRawMutex, crate::ui::UiState,
 
 #[derive(Copy, Clone)]
 pub struct PitchInput {
-    pub values: [i32; SAMPLE_WINDOW_LEN],
-    pub sample_rate_hz: u32,
+	pub values: [i32; SAMPLE_WINDOW_LEN],
+	pub sample_rate_hz: u32,
 }
 
 #[derive(Copy, Clone)]
 pub struct PitchEstimate {
-    pub frequency_hz_x100: u32,
-    pub confidence_permille: u16,
+	pub frequency_hz_x100: u32,
+	pub confidence_permille: u16,
 }
 
 const NOTE_NAMES: [&str; 4] = ["E1", "A1", "D2", "G2"];
@@ -26,187 +26,187 @@ const MIN_TARGET_HZ: u32 = 35;
 const MAX_TARGET_HZ: u32 = 200;
 
 fn estimate_pitch(input: &PitchInput) -> Option<PitchEstimate> {
-    let fs = input.sample_rate_hz.max(1);
-    let min_lag = ((fs + MAX_TARGET_HZ - 1) / MAX_TARGET_HZ).max(1) as usize;
-    let max_lag = (fs / MIN_TARGET_HZ).max(min_lag as u32) as usize;
-    let max_lag = max_lag.min(SAMPLE_WINDOW_LEN.saturating_sub(2));
+	let fs = input.sample_rate_hz.max(1);
+	let min_lag = fs.div_ceil(MAX_TARGET_HZ).max(1) as usize;
+	let max_lag = (fs / MIN_TARGET_HZ).max(min_lag as u32) as usize;
+	let max_lag = max_lag.min(SAMPLE_WINDOW_LEN.saturating_sub(2));
 
-    let mut best_lag = 0usize;
-    let mut best_corr: i64 = i64::MIN;
-    let mut best_energy: i64 = 1;
+	let mut best_lag = 0usize;
+	let mut best_corr: i64 = i64::MIN;
+	let mut best_energy: i64 = 1;
 
-    for lag in min_lag..=max_lag {
-        let mut corr: i64 = 0;
-        let mut e1: i64 = 0;
-        let mut e2: i64 = 0;
+	for lag in min_lag..=max_lag {
+		let mut corr: i64 = 0;
+		let mut e1: i64 = 0;
+		let mut e2: i64 = 0;
 
-        let n = SAMPLE_WINDOW_LEN - lag;
-        for i in 0..n {
-            let a = input.values[i] as i64;
-            let b = input.values[i + lag] as i64;
-            corr += a * b;
-            e1 += a * a;
-            e2 += b * b;
-        }
+		let n = SAMPLE_WINDOW_LEN - lag;
+		for i in 0..n {
+			let a = input.values[i] as i64;
+			let b = input.values[i + lag] as i64;
+			corr += a * b;
+			e1 += a * a;
+			e2 += b * b;
+		}
 
-        let energy = ((e1 + e2) / 2).max(1);
-        if corr > best_corr {
-            best_corr = corr;
-            best_lag = lag;
-            best_energy = energy;
-        }
-    }
+		let energy = ((e1 + e2) / 2).max(1);
+		if corr > best_corr {
+			best_corr = corr;
+			best_lag = lag;
+			best_energy = energy;
+		}
+	}
 
-    if best_lag == 0 || best_corr <= 0 {
-        return None;
-    }
+	if best_lag == 0 || best_corr <= 0 {
+		return None;
+	}
 
-    let confidence_permille = ((best_corr * 1000) / best_energy).clamp(0, 1000) as u16;
-    if confidence_permille < 120 {
-        return None;
-    }
+	let confidence_permille = ((best_corr * 1000) / best_energy).clamp(0, 1000) as u16;
+	if confidence_permille < 120 {
+		return None;
+	}
 
-    let freq_x100 = (fs as u64 * 100 / best_lag as u64) as u32;
-    Some(PitchEstimate {
-        frequency_hz_x100: freq_x100,
-        confidence_permille,
-    })
+	let freq_x100 = (fs as u64 * 100 / best_lag as u64) as u32;
+	Some(PitchEstimate {
+		frequency_hz_x100: freq_x100,
+		confidence_permille,
+	})
 }
 
 fn nearest_octave_target(freq_hz_x100: u32, base_hz_x100: u32) -> u32 {
-    let mut cand = base_hz_x100.max(1);
-    while cand.saturating_mul(2) <= freq_hz_x100 {
-        cand = cand.saturating_mul(2);
-    }
+	let mut cand = base_hz_x100.max(1);
+	while cand.saturating_mul(2) <= freq_hz_x100 {
+		cand = cand.saturating_mul(2);
+	}
 
-    let up = cand.saturating_mul(2);
-    if up > 0 && freq_hz_x100.abs_diff(up) < freq_hz_x100.abs_diff(cand) {
-        up
-    } else {
-        cand
-    }
+	let up = cand.saturating_mul(2);
+	if up > 0 && freq_hz_x100.abs_diff(up) < freq_hz_x100.abs_diff(cand) {
+		up
+	} else {
+		cand
+	}
 }
 
 fn nearest_bass_note(freq_hz_x100: u32) -> (usize, u32, i32) {
-    let mut best_idx = 0usize;
-    let mut best_abs = i64::MAX;
-    let mut best_target = NOTE_FREQ_HZ_X100[0];
-    let mut signed_delta = 0i32;
+	let mut best_idx = 0usize;
+	let mut best_abs = i64::MAX;
+	let mut best_target = NOTE_FREQ_HZ_X100[0];
+	let mut signed_delta = 0i32;
 
-    for (idx, base_target) in NOTE_FREQ_HZ_X100.iter().enumerate() {
-        let target = nearest_octave_target(freq_hz_x100, *base_target);
-        let delta = freq_hz_x100 as i64 - target as i64;
-        let abs = delta.abs();
-        if abs < best_abs {
-            best_abs = abs;
-            best_idx = idx;
-            best_target = target;
-            signed_delta = delta as i32;
-        }
-    }
+	for (idx, base_target) in NOTE_FREQ_HZ_X100.iter().enumerate() {
+		let target = nearest_octave_target(freq_hz_x100, *base_target);
+		let delta = freq_hz_x100 as i64 - target as i64;
+		let abs = delta.abs();
+		if abs < best_abs {
+			best_abs = abs;
+			best_idx = idx;
+			best_target = target;
+			signed_delta = delta as i32;
+		}
+	}
 
-    (best_idx, best_target, signed_delta)
+	(best_idx, best_target, signed_delta)
 }
 
 fn approx_cents_x10(freq_hz_x100: u32, target_hz_x100: u32) -> i32 {
-    // Small-error linear approximation around the target:
-    // cents ~= 1731.234 * (f/ft - 1)
-    let ratio_err = (freq_hz_x100 as f32 / target_hz_x100 as f32) - 1.0;
-    (ratio_err * 17312.34) as i32
+	// Small-error linear approximation around the target:
+	// cents ~= 1731.234 * (f/ft - 1)
+	let ratio_err = (freq_hz_x100 as f32 / target_hz_x100 as f32) - 1.0;
+	(ratio_err * 17312.34) as i32
 }
 
 fn make_square_like(freq_hz_x100: u32) -> PitchInput {
-    let sample_rate_hz = 416;
-    let period_samples = ((sample_rate_hz as u64 * 100) / freq_hz_x100 as u64).max(2) as usize;
-    let half = (period_samples / 2).max(1);
-    let mut values = [0i32; SAMPLE_WINDOW_LEN];
+	let sample_rate_hz = 416;
+	let period_samples = ((sample_rate_hz as u64 * 100) / freq_hz_x100 as u64).max(2) as usize;
+	let half = (period_samples / 2).max(1);
+	let mut values = [0i32; SAMPLE_WINDOW_LEN];
 
-    for (i, v) in values.iter_mut().enumerate() {
-        let phase = i % period_samples;
-        *v = if phase < half { 12_000 } else { -12_000 };
-    }
+	for (i, v) in values.iter_mut().enumerate() {
+		let phase = i % period_samples;
+		*v = if phase < half { 12_000 } else { -12_000 };
+	}
 
-    PitchInput {
-        values,
-        sample_rate_hz,
-    }
+	PitchInput {
+		values,
+		sample_rate_hz,
+	}
 }
 
 pub fn run_validation_harness() {
-    let mut pass = 0u8;
-    for (idx, target) in NOTE_FREQ_HZ_X100.iter().enumerate() {
-        let input = make_square_like(*target);
-        let Some(est) = estimate_pitch(&input) else {
-            warn!("validation {} failed: no estimate", NOTE_NAMES[idx]);
-            continue;
-        };
+	let mut pass = 0u8;
+	for (idx, target) in NOTE_FREQ_HZ_X100.iter().enumerate() {
+		let input = make_square_like(*target);
+		let Some(est) = estimate_pitch(&input) else {
+			warn!("validation {} failed: no estimate", NOTE_NAMES[idx]);
+			continue;
+		};
 
-        let (note_idx, _, _) = nearest_bass_note(est.frequency_hz_x100);
-        let freq_err = est.frequency_hz_x100.abs_diff(*target);
-        if note_idx == idx && freq_err <= 600 {
-            pass += 1;
-            info!(
-                "validation {} ok freq={}cHz conf={}",
-                NOTE_NAMES[idx],
-                est.frequency_hz_x100,
-                est.confidence_permille
-            );
-        } else {
-            warn!(
-                "validation {} failed freq={}cHz note_idx={}",
-                NOTE_NAMES[idx],
-                est.frequency_hz_x100,
-                note_idx
-            );
-        }
-    }
+		let (note_idx, _, _) = nearest_bass_note(est.frequency_hz_x100);
+		let freq_err = est.frequency_hz_x100.abs_diff(*target);
+		if note_idx == idx && freq_err <= 600 {
+			pass += 1;
+			info!(
+				"validation {} ok freq={}cHz conf={}",
+				NOTE_NAMES[idx], est.frequency_hz_x100, est.confidence_permille
+			);
+		} else {
+			warn!(
+				"validation {} failed freq={}cHz note_idx={}",
+				NOTE_NAMES[idx], est.frequency_hz_x100, note_idx
+			);
+		}
+	}
 
-    info!("validation summary: {}/{} vectors passed", pass, NOTE_NAMES.len());
+	info!(
+		"validation summary: {}/{} vectors passed",
+		pass,
+		NOTE_NAMES.len()
+	);
 }
 
 #[task]
 pub async fn pitch_task(rx: PitchInputReceiver, ui_tx: UiStateSender) {
-    let mut stable_hits: u8 = 0;
-    let mut miss_hits: u8 = 0;
+	let mut stable_hits: u8 = 0;
+	let mut miss_hits: u8 = 0;
 
-    loop {
-        let input = rx.receive().await;
-        let Some(estimate) = estimate_pitch(&input) else {
-            stable_hits = 0;
-            miss_hits = miss_hits.saturating_add(1);
-            if miss_hits >= 3 {
-                let _ = ui_tx.try_send(crate::ui::UiState::no_pitch());
-            }
-            continue;
-        };
-        miss_hits = 0;
-        stable_hits = stable_hits.saturating_add(1);
+	loop {
+		let input = rx.receive().await;
+		let Some(estimate) = estimate_pitch(&input) else {
+			stable_hits = 0;
+			miss_hits = miss_hits.saturating_add(1);
+			if miss_hits >= 3 {
+				let _ = ui_tx.try_send(crate::ui::UiState::no_pitch());
+			}
+			continue;
+		};
+		miss_hits = 0;
+		stable_hits = stable_hits.saturating_add(1);
 
-        let (idx, target, _delta) = nearest_bass_note(estimate.frequency_hz_x100);
-        let cents_x10 = approx_cents_x10(estimate.frequency_hz_x100, target);
-        let state = crate::ui::UiState::from_pitch(
-            NOTE_NAMES[idx],
-            estimate.frequency_hz_x100,
-            cents_x10,
-            estimate.confidence_permille,
-        );
+		let (idx, target, _delta) = nearest_bass_note(estimate.frequency_hz_x100);
+		let cents_x10 = approx_cents_x10(estimate.frequency_hz_x100, target);
+		let state = crate::ui::UiState::from_pitch(
+			NOTE_NAMES[idx],
+			estimate.frequency_hz_x100,
+			cents_x10,
+			estimate.confidence_permille,
+		);
 
-        // Require a short confirmation streak before surfacing pitch updates.
-        if stable_hits < 2 {
-            continue;
-        }
+		// Require a short confirmation streak before surfacing pitch updates.
+		if stable_hits < 2 {
+			continue;
+		}
 
-        if ui_tx.try_send(state).is_err() {
-            warn!("ui queue full; dropping pitch state");
-        } else {
-            info!(
-                "pitch freq={}cHz note={} target={}cHz centsx10={} conf={}",
-                estimate.frequency_hz_x100,
-                NOTE_NAMES[idx],
-                target,
-                cents_x10,
-                estimate.confidence_permille
-            );
-        }
-    }
+		if ui_tx.try_send(state).is_err() {
+			warn!("ui queue full; dropping pitch state");
+		} else {
+			info!(
+				"pitch freq={}cHz note={} target={}cHz centsx10={} conf={}",
+				estimate.frequency_hz_x100,
+				NOTE_NAMES[idx],
+				target,
+				cents_x10,
+				estimate.confidence_permille
+			);
+		}
+	}
 }
