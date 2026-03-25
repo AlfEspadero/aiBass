@@ -11,7 +11,8 @@ const REG_WHO_AM_I: u8 = 0x0F;
 const REG_CTRL3_C: u8 = 0x12;
 const REG_CTRL1_XL: u8 = 0x10;
 const REG_CTRL2_G: u8 = 0x11;
-const REG_OUTX_L_G: u8 = 0x22;
+const REG_STATUS: u8 = 0x1E;
+const REG_OUTX_L_XL: u8 = 0x28;
 const SAMPLE_PERIOD_MS: u64 = 4;
 const EFFECTIVE_SAMPLE_RATE_HZ: u32 = 208;
 const BUFFER_LEN: usize = SAMPLE_WINDOW_LEN;
@@ -74,7 +75,7 @@ async fn configure_imu(i2c: &mut ImuI2c) -> Result<(), embassy_stm32::i2c::Error
     // Enable register auto-increment (IF_INC=1) for burst reads.
     i2c.write(LSM6DSL_ADDR, &[REG_CTRL3_C, 0x04]).await?;
 
-    // Accelerometer: 208 Hz, +/-2g.
+    // Accelerometer: 208 Hz, +/-2g (LPF disabled for clearer vibration content).
     i2c.write(LSM6DSL_ADDR, &[REG_CTRL1_XL, 0x50]).await?;
 
     // Gyroscope: 208 Hz, 250 dps.
@@ -128,13 +129,23 @@ pub async fn acquisition_task(mut i2c: ImuI2c, pitch_tx: Sender<'static, embassy
     }
 
     let mut ring = SampleRingBuffer::new();
-    let mut raw = [0u8; 12];
+    let mut raw = [0u8; 6];
+    let mut status = [0u8; 1];
 
     loop {
-        if let Err(e) = i2c
-            .write_read(LSM6DSL_ADDR, &[REG_OUTX_L_G | 0x80], &mut raw)
-            .await
-        {
+        // Poll status register; bit0 indicates new accel data available.
+        if let Err(e) = i2c.write_read(LSM6DSL_ADDR, &[REG_STATUS], &mut status).await {
+            warn!("IMU status read failed: {:?}", e);
+            Timer::after(Duration::from_millis(SAMPLE_PERIOD_MS)).await;
+            continue;
+        }
+
+        if status[0] & 0x01 == 0 {
+            Timer::after(Duration::from_millis(SAMPLE_PERIOD_MS)).await;
+            continue;
+        }
+
+        if let Err(e) = i2c.write_read(LSM6DSL_ADDR, &[REG_OUTX_L_XL], &mut raw).await {
             warn!("IMU sample read failed: {:?}", e);
             Timer::after(Duration::from_millis(SAMPLE_PERIOD_MS)).await;
             continue;
@@ -142,12 +153,12 @@ pub async fn acquisition_task(mut i2c: ImuI2c, pitch_tx: Sender<'static, embassy
 
         let sample = ImuSample {
             timestamp_ms: Instant::now().as_millis(),
-            gx: i16::from_le_bytes([raw[0], raw[1]]),
-            gy: i16::from_le_bytes([raw[2], raw[3]]),
-            gz: i16::from_le_bytes([raw[4], raw[5]]),
-            ax: i16::from_le_bytes([raw[6], raw[7]]),
-            ay: i16::from_le_bytes([raw[8], raw[9]]),
-            az: i16::from_le_bytes([raw[10], raw[11]]),
+            gx: 0,
+            gy: 0,
+            gz: 0,
+            ax: i16::from_le_bytes([raw[0], raw[1]]),
+            ay: i16::from_le_bytes([raw[2], raw[3]]),
+            az: i16::from_le_bytes([raw[4], raw[5]]),
         };
 
         ring.push(sample);
