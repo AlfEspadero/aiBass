@@ -73,7 +73,7 @@ async fn configure_imu(i2c: &mut ImuI2c) -> Result<(), embassy_stm32::i2c::Error
     // Enable register auto-increment (IF_INC=1) for burst reads.
     i2c.write(LSM6DSL_ADDR, &[REG_CTRL3_C, 0x04]).await?;
 
-    // Accelerometer: 104 Hz, +/-2g, 50 Hz filter (baseline config).
+    // Accelerometer: 104 Hz, +/-2g.
     i2c.write(LSM6DSL_ADDR, &[REG_CTRL1_XL, 0x40]).await?;
 
     // Gyroscope: 104 Hz, 250 dps.
@@ -110,7 +110,10 @@ fn build_pitch_input(ring: &SampleRingBuffer) -> Option<PitchInput> {
         *v -= mean as i32;
     }
 
-    Some(PitchInput { values })
+    Some(PitchInput {
+        values,
+        sample_rate_hz: 100,
+    })
 }
 
 #[task]
@@ -161,7 +164,14 @@ pub async fn acquisition_task(mut i2c: ImuI2c, pitch_tx: Sender<'static, embassy
         }
 
         if ring.len() % 32 == 0 {
-            info!("acq ring fill={} last_gx={} last_ax={} last_ay={} last_az={}", ring.len(), sample.gx, sample.ax, sample.ay, sample.az);
+            info!(
+                "acq ring fill={} fs={}Hz last_ax={} last_ay={} last_az={}",
+                ring.len(),
+                100,
+                sample.ax,
+                sample.ay,
+                sample.az
+            );
         }
 
         Timer::after(Duration::from_millis(SAMPLE_PERIOD_MS)).await;

@@ -3,7 +3,6 @@ use embassy_executor::task;
 use embassy_sync::blocking_mutex::raw::ThreadModeRawMutex;
 use embassy_sync::channel::{Receiver, Sender};
 
-pub const SAMPLE_RATE_HZ: u32 = 1_000;
 pub const SAMPLE_WINDOW_LEN: usize = 128;
 
 pub type PitchInputReceiver = Receiver<'static, ThreadModeRawMutex, PitchInput, 4>;
@@ -12,6 +11,7 @@ pub type UiStateSender = Sender<'static, ThreadModeRawMutex, crate::ui::UiState,
 #[derive(Copy, Clone)]
 pub struct PitchInput {
     pub values: [i32; SAMPLE_WINDOW_LEN],
+    pub sample_rate_hz: u32,
 }
 
 #[derive(Copy, Clone)]
@@ -22,15 +22,20 @@ pub struct PitchEstimate {
 
 const NOTE_NAMES: [&str; 4] = ["E1", "A1", "D2", "G2"];
 const NOTE_FREQ_HZ_X100: [u32; 4] = [4120, 5500, 7342, 9800];
-const MIN_LAG: usize = 8;
-const MAX_LAG: usize = 32;
+const MIN_TARGET_HZ: u32 = 35;
+const MAX_TARGET_HZ: u32 = 120;
 
 fn estimate_pitch(input: &PitchInput) -> Option<PitchEstimate> {
+    let fs = input.sample_rate_hz.max(1);
+    let min_lag = ((fs + MAX_TARGET_HZ - 1) / MAX_TARGET_HZ).max(1) as usize;
+    let max_lag = (fs / MIN_TARGET_HZ).max(min_lag as u32) as usize;
+    let max_lag = max_lag.min(SAMPLE_WINDOW_LEN.saturating_sub(2));
+
     let mut best_lag = 0usize;
     let mut best_corr: i64 = i64::MIN;
     let mut best_energy: i64 = 1;
 
-    for lag in MIN_LAG..=MAX_LAG {
+    for lag in min_lag..=max_lag {
         let mut corr: i64 = 0;
         let mut e1: i64 = 0;
         let mut e2: i64 = 0;
@@ -61,7 +66,7 @@ fn estimate_pitch(input: &PitchInput) -> Option<PitchEstimate> {
         return None;
     }
 
-    let freq_x100 = (SAMPLE_RATE_HZ as u64 * 100 / best_lag as u64) as u32;
+    let freq_x100 = (fs as u64 * 100 / best_lag as u64) as u32;
     Some(PitchEstimate {
         frequency_hz_x100: freq_x100,
         confidence_permille,
@@ -94,7 +99,8 @@ fn approx_cents_x10(freq_hz_x100: u32, target_hz_x100: u32) -> i32 {
 }
 
 fn make_square_like(freq_hz_x100: u32) -> PitchInput {
-    let period_samples = ((SAMPLE_RATE_HZ as u64 * 100) / freq_hz_x100 as u64).max(2) as usize;
+    let sample_rate_hz = 100;
+    let period_samples = ((sample_rate_hz as u64 * 100) / freq_hz_x100 as u64).max(2) as usize;
     let half = (period_samples / 2).max(1);
     let mut values = [0i32; SAMPLE_WINDOW_LEN];
 
@@ -103,7 +109,10 @@ fn make_square_like(freq_hz_x100: u32) -> PitchInput {
         *v = if phase < half { 12_000 } else { -12_000 };
     }
 
-    PitchInput { values }
+    PitchInput {
+        values,
+        sample_rate_hz,
+    }
 }
 
 pub fn run_validation_harness() {
