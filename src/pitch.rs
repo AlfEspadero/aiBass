@@ -1,4 +1,4 @@
-use defmt::{info, warn};
+use defmt::{debug, info, warn};
 use embassy_executor::task;
 use embassy_sync::blocking_mutex::raw::ThreadModeRawMutex;
 use embassy_sync::channel::{Receiver, Sender};
@@ -145,7 +145,7 @@ pub fn run_validation_harness() {
 		let freq_err = est.frequency_hz_x100.abs_diff(*target);
 		if note_idx == idx && freq_err <= 600 {
 			pass += 1;
-			info!(
+			debug!(
 				"validation {} ok freq={}cHz conf={}",
 				NOTE_NAMES[idx], est.frequency_hz_x100, est.confidence_permille
 			);
@@ -157,7 +157,7 @@ pub fn run_validation_harness() {
 		}
 	}
 
-	info!(
+	debug!(
 		"validation summary: {}/{} vectors passed",
 		pass,
 		NOTE_NAMES.len()
@@ -199,7 +199,7 @@ pub async fn pitch_task(rx: PitchInputReceiver, ui_tx: UiStateSender) {
 		if ui_tx.try_send(state).is_err() {
 			warn!("ui queue full; dropping pitch state");
 		} else {
-			info!(
+			debug!(
 				"pitch freq={}cHz note={} target={}cHz centsx10={} conf={}",
 				estimate.frequency_hz_x100,
 				NOTE_NAMES[idx],

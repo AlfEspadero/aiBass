@@ -1,4 +1,4 @@
-use defmt::{info, warn};
+use defmt::{debug, info, warn};
 use embassy_executor::task;
 use embassy_sync::channel::Sender;
 use embassy_time::{Duration, Instant, Timer};
@@ -208,7 +208,7 @@ pub async fn acquisition_task(
 		}
 
 		if ring.len().is_multiple_of(32) {
-			info!(
+			debug!(
 				"acq ring fill={} fs={}Hz last_ax={} last_ay={} last_az={}",
 				ring.len(),
 				EFFECTIVE_SAMPLE_RATE_HZ,
