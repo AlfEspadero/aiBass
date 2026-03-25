@@ -73,22 +73,39 @@ fn estimate_pitch(input: &PitchInput) -> Option<PitchEstimate> {
     })
 }
 
-fn nearest_bass_note(freq_hz_x100: u32) -> (usize, i32) {
+fn nearest_octave_target(freq_hz_x100: u32, base_hz_x100: u32) -> u32 {
+    let mut cand = base_hz_x100.max(1);
+    while cand.saturating_mul(2) <= freq_hz_x100 {
+        cand = cand.saturating_mul(2);
+    }
+
+    let up = cand.saturating_mul(2);
+    if up > 0 && freq_hz_x100.abs_diff(up) < freq_hz_x100.abs_diff(cand) {
+        up
+    } else {
+        cand
+    }
+}
+
+fn nearest_bass_note(freq_hz_x100: u32) -> (usize, u32, i32) {
     let mut best_idx = 0usize;
     let mut best_abs = i64::MAX;
+    let mut best_target = NOTE_FREQ_HZ_X100[0];
     let mut signed_delta = 0i32;
 
-    for (idx, target) in NOTE_FREQ_HZ_X100.iter().enumerate() {
-        let delta = freq_hz_x100 as i64 - *target as i64;
+    for (idx, base_target) in NOTE_FREQ_HZ_X100.iter().enumerate() {
+        let target = nearest_octave_target(freq_hz_x100, *base_target);
+        let delta = freq_hz_x100 as i64 - target as i64;
         let abs = delta.abs();
         if abs < best_abs {
             best_abs = abs;
             best_idx = idx;
+            best_target = target;
             signed_delta = delta as i32;
         }
     }
 
-    (best_idx, signed_delta)
+    (best_idx, best_target, signed_delta)
 }
 
 fn approx_cents_x10(freq_hz_x100: u32, target_hz_x100: u32) -> i32 {
@@ -124,7 +141,7 @@ pub fn run_validation_harness() {
             continue;
         };
 
-        let (note_idx, _) = nearest_bass_note(est.frequency_hz_x100);
+        let (note_idx, _, _) = nearest_bass_note(est.frequency_hz_x100);
         let freq_err = est.frequency_hz_x100.abs_diff(*target);
         if note_idx == idx && freq_err <= 600 {
             pass += 1;
@@ -165,8 +182,7 @@ pub async fn pitch_task(rx: PitchInputReceiver, ui_tx: UiStateSender) {
         miss_hits = 0;
         stable_hits = stable_hits.saturating_add(1);
 
-        let (idx, _delta) = nearest_bass_note(estimate.frequency_hz_x100);
-        let target = NOTE_FREQ_HZ_X100[idx];
+        let (idx, target, _delta) = nearest_bass_note(estimate.frequency_hz_x100);
         let cents_x10 = approx_cents_x10(estimate.frequency_hz_x100, target);
         let state = crate::ui::UiState::from_pitch(
             NOTE_NAMES[idx],
@@ -184,9 +200,10 @@ pub async fn pitch_task(rx: PitchInputReceiver, ui_tx: UiStateSender) {
             warn!("ui queue full; dropping pitch state");
         } else {
             info!(
-                "pitch freq={}cHz note={} centsx10={} conf={}",
+                "pitch freq={}cHz note={} target={}cHz centsx10={} conf={}",
                 estimate.frequency_hz_x100,
                 NOTE_NAMES[idx],
+                target,
                 cents_x10,
                 estimate.confidence_permille
             );
