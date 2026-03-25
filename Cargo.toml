@@ -1,0 +1,28 @@
+[package]
+name = "aibass-firmware"
+version = "0.1.0"
+edition = "2024"
+license = "MIT OR Apache-2.0"
+
+[features]
+default = []
+nanoedge = []
+
+[dependencies]
+cortex-m = { version = "0.7.6", features = ["critical-section-single-core"] }
+cortex-m-rt = "0.7.0"
+defmt = "1.0.1"
+defmt-rtt = "1.0.0"
+panic-probe = { version = "1.0.0", features = ["print-defmt"] }
+
+embassy-executor = { version = "0.10.0", features = ["platform-cortex-m", "executor-thread", "defmt"] }
+embassy-sync = { version = "0.8.0", features = ["defmt"] }
+embassy-stm32 = { version = "0.6.0", features = ["defmt", "memory-x", "stm32l4s5vi", "time-driver-any", "exti", "dual-bank"] }
+embassy-time = { version = "0.5.1", features = ["defmt", "tick-hz-32_768"] }
+
+[profile.release]
+codegen-units = 1
+debug = 2
+incremental = false
+lto = "fat"
+opt-level = "s"
