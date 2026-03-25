@@ -13,8 +13,8 @@ const REG_CTRL1_XL: u8 = 0x10;
 const REG_CTRL2_G: u8 = 0x11;
 const REG_STATUS: u8 = 0x1E;
 const REG_OUTX_L_XL: u8 = 0x28;
-const SAMPLE_PERIOD_MS: u64 = 4;
-const EFFECTIVE_SAMPLE_RATE_HZ: u32 = 208;
+const SAMPLE_PERIOD_MS: u64 = 2;
+const EFFECTIVE_SAMPLE_RATE_HZ: u32 = 416;
 const BUFFER_LEN: usize = SAMPLE_WINDOW_LEN;
 
 #[derive(Copy, Clone)]
@@ -75,11 +75,11 @@ async fn configure_imu(i2c: &mut ImuI2c) -> Result<(), embassy_stm32::i2c::Error
     // Enable register auto-increment (IF_INC=1) for burst reads.
     i2c.write(LSM6DSL_ADDR, &[REG_CTRL3_C, 0x04]).await?;
 
-    // Accelerometer: 208 Hz, +/-2g (LPF disabled for clearer vibration content).
-    i2c.write(LSM6DSL_ADDR, &[REG_CTRL1_XL, 0x50]).await?;
+    // Accelerometer: 416 Hz, +/-2g (LPF disabled for clearer vibration content).
+    i2c.write(LSM6DSL_ADDR, &[REG_CTRL1_XL, 0x60]).await?;
 
-    // Gyroscope: 208 Hz, 250 dps.
-    i2c.write(LSM6DSL_ADDR, &[REG_CTRL2_G, 0x50]).await?;
+    // Gyroscope: 416 Hz, 250 dps.
+    i2c.write(LSM6DSL_ADDR, &[REG_CTRL2_G, 0x60]).await?;
 
     Ok(())
 }
@@ -91,19 +91,45 @@ fn build_pitch_input(ring: &SampleRingBuffer) -> Option<PitchInput> {
 
     let mut values = [0i32; SAMPLE_WINDOW_LEN];
     let start = ring.write_idx;
-    let mut mean: i64 = 0;
+    let mut mean_x: i64 = 0;
+    let mut mean_y: i64 = 0;
+    let mut mean_z: i64 = 0;
+    let mut energy_x: i64 = 0;
+    let mut energy_y: i64 = 0;
+    let mut energy_z: i64 = 0;
+    let mut x = [0i32; SAMPLE_WINDOW_LEN];
+    let mut y = [0i32; SAMPLE_WINDOW_LEN];
+    let mut z = [0i32; SAMPLE_WINDOW_LEN];
 
     for i in 0..SAMPLE_WINDOW_LEN {
         let idx = (start + i) % SAMPLE_WINDOW_LEN;
-        // Use a signed single-axis vibration signal to preserve fundamental frequency.
-        let v = ring.data[idx].ax as i32;
-        values[i] = v;
-        mean += v as i64;
+        x[i] = ring.data[idx].ax as i32;
+        y[i] = ring.data[idx].ay as i32;
+        z[i] = ring.data[idx].az as i32;
+        mean_x += x[i] as i64;
+        mean_y += y[i] as i64;
+        mean_z += z[i] as i64;
     }
 
-    mean /= SAMPLE_WINDOW_LEN as i64;
-    for v in &mut values {
-        *v -= mean as i32;
+    mean_x /= SAMPLE_WINDOW_LEN as i64;
+    mean_y /= SAMPLE_WINDOW_LEN as i64;
+    mean_z /= SAMPLE_WINDOW_LEN as i64;
+
+    for i in 0..SAMPLE_WINDOW_LEN {
+        x[i] -= mean_x as i32;
+        y[i] -= mean_y as i32;
+        z[i] -= mean_z as i32;
+        energy_x += (x[i] as i64) * (x[i] as i64);
+        energy_y += (y[i] as i64) * (y[i] as i64);
+        energy_z += (z[i] as i64) * (z[i] as i64);
+    }
+
+    if energy_x >= energy_y && energy_x >= energy_z {
+        values.copy_from_slice(&x);
+    } else if energy_y >= energy_x && energy_y >= energy_z {
+        values.copy_from_slice(&y);
+    } else {
+        values.copy_from_slice(&z);
     }
 
     Some(PitchInput {
