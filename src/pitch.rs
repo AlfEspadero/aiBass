@@ -23,7 +23,7 @@ pub struct PitchEstimate {
 const NOTE_NAMES: [&str; 4] = ["E1", "A1", "D2", "G2"];
 const NOTE_FREQ_HZ_X100: [u32; 4] = [4120, 5500, 7342, 9800];
 const MIN_TARGET_HZ: u32 = 35;
-const MAX_TARGET_HZ: u32 = 120;
+const MAX_TARGET_HZ: u32 = 140;
 
 fn estimate_pitch(input: &PitchInput) -> Option<PitchEstimate> {
     let fs = input.sample_rate_hz.max(1);
@@ -62,7 +62,7 @@ fn estimate_pitch(input: &PitchInput) -> Option<PitchEstimate> {
     }
 
     let confidence_permille = ((best_corr * 1000) / best_energy).clamp(0, 1000) as u16;
-    if confidence_permille < 220 {
+    if confidence_permille < 180 {
         return None;
     }
 
@@ -99,7 +99,7 @@ fn approx_cents_x10(freq_hz_x100: u32, target_hz_x100: u32) -> i32 {
 }
 
 fn make_square_like(freq_hz_x100: u32) -> PitchInput {
-    let sample_rate_hz = 100;
+    let sample_rate_hz = 208;
     let period_samples = ((sample_rate_hz as u64 * 100) / freq_hz_x100 as u64).max(2) as usize;
     let half = (period_samples / 2).max(1);
     let mut values = [0i32; SAMPLE_WINDOW_LEN];

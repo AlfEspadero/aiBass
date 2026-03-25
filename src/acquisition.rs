@@ -12,7 +12,8 @@ const REG_CTRL3_C: u8 = 0x12;
 const REG_CTRL1_XL: u8 = 0x10;
 const REG_CTRL2_G: u8 = 0x11;
 const REG_OUTX_L_G: u8 = 0x22;
-const SAMPLE_PERIOD_MS: u64 = 10;
+const SAMPLE_PERIOD_MS: u64 = 4;
+const EFFECTIVE_SAMPLE_RATE_HZ: u32 = 208;
 const BUFFER_LEN: usize = SAMPLE_WINDOW_LEN;
 
 #[derive(Copy, Clone)]
@@ -73,20 +74,13 @@ async fn configure_imu(i2c: &mut ImuI2c) -> Result<(), embassy_stm32::i2c::Error
     // Enable register auto-increment (IF_INC=1) for burst reads.
     i2c.write(LSM6DSL_ADDR, &[REG_CTRL3_C, 0x04]).await?;
 
-    // Accelerometer: 104 Hz, +/-2g.
-    i2c.write(LSM6DSL_ADDR, &[REG_CTRL1_XL, 0x40]).await?;
+    // Accelerometer: 208 Hz, +/-2g.
+    i2c.write(LSM6DSL_ADDR, &[REG_CTRL1_XL, 0x50]).await?;
 
-    // Gyroscope: 104 Hz, 250 dps.
-    i2c.write(LSM6DSL_ADDR, &[REG_CTRL2_G, 0x40]).await?;
+    // Gyroscope: 208 Hz, 250 dps.
+    i2c.write(LSM6DSL_ADDR, &[REG_CTRL2_G, 0x50]).await?;
 
     Ok(())
-}
-
-fn accel_magnitude_sq(sample: &ImuSample) -> i64 {
-    let ax = sample.ax as i64;
-    let ay = sample.ay as i64;
-    let az = sample.az as i64;
-    ax * ax + ay * ay + az * az
 }
 
 fn build_pitch_input(ring: &SampleRingBuffer) -> Option<PitchInput> {
@@ -100,7 +94,8 @@ fn build_pitch_input(ring: &SampleRingBuffer) -> Option<PitchInput> {
 
     for i in 0..SAMPLE_WINDOW_LEN {
         let idx = (start + i) % SAMPLE_WINDOW_LEN;
-        let v = accel_magnitude_sq(&ring.data[idx]) as i32;
+        // Use a signed single-axis vibration signal to preserve fundamental frequency.
+        let v = ring.data[idx].ax as i32;
         values[i] = v;
         mean += v as i64;
     }
@@ -112,7 +107,7 @@ fn build_pitch_input(ring: &SampleRingBuffer) -> Option<PitchInput> {
 
     Some(PitchInput {
         values,
-        sample_rate_hz: 100,
+        sample_rate_hz: EFFECTIVE_SAMPLE_RATE_HZ,
     })
 }
 
@@ -167,7 +162,7 @@ pub async fn acquisition_task(mut i2c: ImuI2c, pitch_tx: Sender<'static, embassy
             info!(
                 "acq ring fill={} fs={}Hz last_ax={} last_ay={} last_az={}",
                 ring.len(),
-                100,
+                EFFECTIVE_SAMPLE_RATE_HZ,
                 sample.ax,
                 sample.ay,
                 sample.az
