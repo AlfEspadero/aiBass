@@ -2,6 +2,8 @@
 runner = "probe-rs run --chip STM32L4S5VI"
 rustflags = [
   "-C",
+  "link-arg=-Tlink.x",
+  "-C",
   "link-arg=-Tdefmt.x",
 ]
 
