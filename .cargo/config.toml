@@ -1,8 +1,12 @@
-[target.'cfg(all(target_arch = "arm", target_os = "none"))']
+[target.thumbv7em-none-eabihf]
 runner = "probe-rs run --chip STM32L4S5VI"
+rustflags = [
+  "-C",
+  "link-arg=-Tdefmt.x",
+]
 
 [build]
 target = "thumbv7em-none-eabihf"
 
 [env]
-DEFMT_LOG = "info"
+DEFMT_LOG = "debug"
