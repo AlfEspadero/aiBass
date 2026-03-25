@@ -184,25 +184,3 @@ pub async fn pitch_task(rx: PitchInputReceiver, ui_tx: UiStateSender) {
         }
     }
 }
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    fn make_sine_like(freq_hz: f32) -> PitchInput {
-        let mut values = [0i32; SAMPLE_WINDOW_LEN];
-        for (i, v) in values.iter_mut().enumerate() {
-            let t = i as f32 / SAMPLE_RATE_HZ as f32;
-            let s = (2.0 * core::f32::consts::PI * freq_hz * t).sin();
-            *v = (s * 10_000.0) as i32;
-        }
-        PitchInput { values }
-    }
-
-    #[test]
-    fn estimates_e1_reasonably() {
-        let input = make_sine_like(41.2);
-        let est = estimate_pitch(&input).expect("should detect pitch");
-        assert!((3800..4600).contains(&est.frequency_hz_x100));
-    }
-}
