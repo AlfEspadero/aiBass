@@ -27,6 +27,7 @@
 /* USER CODE BEGIN Includes */
 
 #include <stdio.h>
+#include <ctype.h>
 #include "LSM6DSL.h"
 #include "NanoEdgeAI.h"
 #include "WS2812.h"
@@ -44,8 +45,10 @@
 #define WINDOW_SIZE 64
 #define AXES 3
 #define WINDOW_READY_FLAG (1U << 0)
+#define LED_UPDATE_FLAG (1U << 1)
 
 static float window[WINDOW_SIZE * AXES];
+static volatile int led_class_id = 0;
 
 /* USER CODE END PD */
 
@@ -54,6 +57,72 @@ static float window[WINDOW_SIZE * AXES];
 
 float input_user_buffer[NEAI_INPUT_SIGNAL_LENGTH * NEAI_INPUT_AXIS_NUMBER];
 float probabilities[NEAI_NUMBER_OF_CLASSES]; // Buffer of class probabilities
+
+static void note_color_from_class(const char *class_name, int *r, int *g, int *b) {
+	char note = '\0';
+	int i = 0;
+
+	if ((r == NULL) || (g == NULL) || (b == NULL)) {
+		return;
+	}
+
+	*r = 0;
+	*g = 255;
+	*b = 0;
+
+	if (class_name == NULL) {
+		return;
+	}
+
+	while (class_name[i] != '\0') {
+		char c = (char) toupper((unsigned char) class_name[i]);
+		if ((c >= 'A') && (c <= 'G')) {
+			note = c;
+			break;
+		}
+		i++;
+	}
+
+	switch (note) {
+	case 'A':
+		*r = 255;
+		*g = 0;
+		*b = 255;
+		break;
+//	case 'B':
+//		*r = 128;
+//		*g = 128;
+//		*b = 128;
+//		break;
+//	case 'C':
+//		*r = 255;
+//		*g = 80;
+//		*b = 0;
+//		break;
+	case 'D':
+		*r = 255;
+		*g = 255;
+		*b = 255;
+		break;
+	case 'E':
+		*r = 0;
+		*g = 255;
+		*b = 255;
+		break;
+//	case 'F':
+//		*r = 255;
+//		*g = 0;
+//		*b = 120;
+//		break;
+	case 'G':
+		*r = 255;
+		*g = 255;
+		*b = 0;
+		break;
+	default:
+		break;
+	}
+}
 
 void acquire_window(void) {
 	for (int i = 0; i < WINDOW_SIZE; i++) {
@@ -107,7 +176,7 @@ osThreadId_t ledtaskHandle;
 const osThreadAttr_t ledtask_attributes = {
   .name = "ledtask",
   .stack_size = 256 * 4,
-  .priority = (osPriority_t) osPriorityAboveNormal,
+  .priority = (osPriority_t) osPriorityNormal,
 };
 /* Definitions for windowMutex */
 osMutexId_t windowMutexHandle;
@@ -239,6 +308,10 @@ void t_neai_classify(void *argument)
 		} else {
 			printf("%s\r\n", neai_get_class_name(id_class));
 		}
+		led_class_id = id_class;
+		if (ledtaskHandle != NULL) {
+			(void) osThreadFlagsSet(ledtaskHandle, LED_UPDATE_FLAG);
+		}
 
 	}
   /* USER CODE END t_neai_classify */
@@ -282,26 +355,27 @@ void t_acquire_window(void *argument)
 /* USER CODE END Header_t_ledtask */
 void t_ledtask(void *argument) {
 	/* USER CODE BEGIN t_ledtask */
-	/* Infinite loop */
+	int r = 0;
+	int g = 255;
+	int b = 0;
+	const char *class_name;
+
+	WS2812_Clear_LED();
+	WS2812_Update();
+
 	for (;;) {
-		for (int i = 0; i < 3; i++) {
-			switch (i) {
-			case 0:
-				WS2812_Set_All_LED(255, 0, 0);
-				break;
-			case 1:
-				WS2812_Set_All_LED(0, 255, 0);
-				break;
-			case 2:
-				WS2812_Set_All_LED(0, 0, 255);
-				break;
-			default:
-				WS2812_Clear_LED();
-				break;
-			}
-			WS2812_Update();
-			osDelay(1000);
+		(void) osThreadFlagsWait(LED_UPDATE_FLAG, osFlagsWaitAny, osWaitForever);
+
+		class_name = neai_get_class_name(led_class_id);
+		if ((class_name == NULL) || (class_name[0] == 'N')) {
+			WS2812_Set_All_LED(255, 0, 0);
+		} else {
+			WS2812_Set_All_LED(0, 255, 0);
+			note_color_from_class(class_name, &r, &g, &b);
+			WS2812_Set_LED(0, r, g, b);
+			WS2812_Set_LED(1, r, g, b);
 		}
+		WS2812_Update();
 	}
 	/* USER CODE END t_ledtask */
 }
