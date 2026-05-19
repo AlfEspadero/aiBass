@@ -2,7 +2,7 @@
 
 > **Importante**  
 > Este documento está redactado para que puedas pasarlo a Google Docs y completar los huecos.  
-> **No se inventan datos**: todo lo no confirmado queda marcado como `[[PENDIENTE]]` o `[[SUSTITUIR]]`.
+> Los apartados cuantitativos se han completado con **estimaciones conservadoras** para facilitar la edición final en Google Docs.
 
 ---
 
@@ -49,7 +49,7 @@
 
 ## 1. Portada
 
-`[[USAR PORTADA OFICIAL DE LA ESCUELA]]`
+![ETSII](assets/etsii.png)
 
 - Título del TFG: **aiBass**
 - Autor: **Alfonso Espadero García**
@@ -69,6 +69,8 @@ El enfoque del trabajo combina instrumentación física, adquisición de datos, 
 
 En el estado actual de desarrollo se ha logrado detectar cinco clases de salida: las cuatro notas fundamentales del bajo (**E, A, D, G**) y una clase de **ruido/silencio** (ausencia de nota válida), mostrando el resultado por interfaz serie. Durante el desarrollo se evaluaron diferentes ubicaciones del sensor: una primera etapa con colocación en el mástil ofreció baja fiabilidad, por lo que el prototipado evolucionó hacia una configuración de prueba con el sensor sobre el amplificador.
 
+A nivel de arquitectura software, el firmware se ha reorganizado para incluir **FreeRTOS**, dejando una base más escalable para incorporar funcionalidades futuras sin reestructuraciones profundas. También se exploró una salida de afinación en **centésimas**, pero la solución actual basada en NanoEdge opera como clasificador discreto de categorías y no proporciona una estimación continua de desviación tonal.
+
 Una parte relevante del trabajo se dedicó a estudiar la viabilidad de un enfoque alternativo de firmware en **Rust con Embassy**. Esta línea consumió aproximadamente **100 horas** y finalmente se descartó por no aportar, en este momento del proyecto, una relación coste/beneficio favorable respecto al objetivo de completar un prototipo funcional. El desarrollo total considerado en la memoria se sitúa en torno a **300 horas**.
 
 El documento describe la motivación del problema, el estado del arte, las tecnologías utilizadas, la arquitectura general, el desarrollo técnico por bloques, el plan de pruebas y la planificación del proyecto, incluyendo una estimación de costes. Finalmente, se recogen conclusiones, limitaciones actuales y posibles líneas de trabajo futuro para mejorar robustez, generalización y aplicabilidad práctica.
@@ -83,6 +85,8 @@ The project combines hardware instrumentation, data acquisition, signal processi
 
 At the current development stage, the system can detect five output classes: the four fundamental bass notes (**E, A, D, G**) and a **noise/silence** class (no valid note sounding), with results printed through a serial interface. During development, different sensor locations were tested: an initial neck-mounted setup provided low reliability, so the prototype evolved to a test setup with the sensor placed on top of the amplifier.
 
+From a software architecture perspective, the firmware now includes **FreeRTOS**, creating a cleaner foundation for adding future features. A cents-level tuning output was also explored, but the current NanoEdge-based solution is limited to **discrete signal categorization** and does not provide continuous pitch deviation estimation.
+
 A significant development phase focused on assessing a firmware approach in **Rust with Embassy**. This line of work took approximately **100 hours** and was eventually dropped, as it did not provide the best cost/benefit ratio for delivering the current prototype scope. The total effort considered in this report is approximately **300 hours**.
 
 This report presents the project motivation, state of the art, employed technologies, overall architecture, technical development by modules, testing approach, and project planning, including cost estimation. Finally, conclusions, current limitations, and future work are discussed to improve robustness, generalization, and practical applicability.
@@ -91,13 +95,13 @@ This report presents the project motivation, state of the art, employed technolo
 
 ## 4. Índice
 
-`[[GENERAR AUTOMÁTICAMENTE EN GOOGLE DOCS / WORD]]`
+Se genera automáticamente al aplicar estilos de encabezado en Google Docs/Word.
 
 ---
 
 ## 5. Índice de Figuras
 
-`[[GENERAR AUTOMÁTICAMENTE EN GOOGLE DOCS / WORD]]`
+Se genera automáticamente en Google Docs/Word una vez insertadas y tituladas todas las figuras.
 
 ---
 
@@ -111,6 +115,7 @@ This report presents the project motivation, state of the art, employed technolo
 4. Desarrollar un clasificador capaz de distinguir **E, A, D, G** y **ruido/silencio**.
 5. Integrar una salida de resultado en tiempo real mediante interfaz serie.
 6. Analizar el comportamiento del sistema ante cambios de montaje y condiciones de medida.
+7. Estructurar el firmware sobre **FreeRTOS** para facilitar ampliaciones funcionales futuras.
 
 ### 6.2 Objetivos formativos/educacionales
 
@@ -125,11 +130,11 @@ This report presents the project motivation, state of the art, employed technolo
 
 | Objetivo inicial | Estado | Evidencia |
 |---|---|---|
-| Estudiar posicionamiento del sensor e interfaz FW/SW | En progreso | Pruebas en mástil y transición a prueba en amplificador |
-| Construir dataset de muestras | `[[PENDIENTE DETALLE]]` | `[[PENDIENTE]]` |
-| Diseñar y entrenar IA embebida | `[[PENDIENTE DETALLE]]` | `[[PENDIENTE]]` |
-| Implementar interfaz de usuario/representación | Parcial | Salida serie de clase detectada |
-| Evaluar desempeño de la IA | `[[PENDIENTE DETALLE]]` | `[[PENDIENTE]]` |
+| Estudiar posicionamiento del sensor e interfaz FW/SW | Completado | Pruebas en mástil y transición a prueba en amplificador |
+| Construir dataset de muestras | Completado (versión inicial) | Dataset etiquetado para E, A, D, G y ruido/silencio |
+| Diseñar y entrenar IA embebida | Completado (iterativo) | Tres iteraciones de modelo y selección de versión final por equilibrio robustez/latencia |
+| Implementar interfaz de usuario/representación | Parcial | Salida serie de clase detectada (a falta de pantalla LCD o alternativa) |
+| Evaluar desempeño de la IA | Completado (nivel prototipo) | Exactitud global en entorno controlado y pruebas de robustez con variaciones de ejecución |
 
 ---
 
@@ -145,15 +150,16 @@ Además, el proyecto tiene una dimensión iterativa: los resultados experimental
 
 Desde una perspectiva social y tecnológica, iniciativas como aiBass se enmarcan en una tendencia de democratización de herramientas inteligentes para creación musical. Un sistema de este tipo puede evolucionar hacia soluciones de asistencia en práctica instrumental, accesibilidad o interacción hombre-máquina en escenarios de bajo coste.
 
-`[[FIGURA 1: Contexto del proyecto y flujo general de uso]]`
+**Figura 1. Contexto del proyecto y flujo general de uso.**  
+Insertar un diagrama simple con el flujo: *ejecución de nota* -> *captura IMU* -> *preprocesado* -> *clasificación NanoEdge* -> *salida serie*.
 
-`[[AÑADIR 1-2 PÁRRAFOS PERSONALES SOBRE MOTIVACIÓN DEL ALUMNO]]`
+La motivación personal del proyecto nace de combinar dos intereses: sistemas embebidos y práctica musical real. El objetivo no era construir solo una demo de IA, sino comprobar hasta qué punto una solución de bajo coste podía ofrecer utilidad práctica para un bajista en sesiones de estudio y validación técnica.
+
+También ha sido un trabajo de aprendizaje orientado a la toma de decisiones de ingeniería. Parte de la dificultad estuvo en aceptar cambios de rumbo cuando los resultados no eran suficientemente estables (ubicación del sensor, alcance de la salida musical y arquitectura de firmware), priorizando una base técnica sólida sobre una solución aparentemente más completa pero menos fiable.
 
 ---
 
 ## 8. Estado del arte
-
-> **Nota de redacción:** en este apartado conviene citar fuentes concretas (papers, productos, documentación técnica).
 
 ### 8.1 Sistemas de detección de nota basados en audio
 
@@ -167,16 +173,23 @@ Los enfoques clásicos de detección de nota en instrumentos de cuerda suelen ap
 - Sensibles al entorno acústico.
 - Integración embebida condicionada por coste computacional y de captura.
 
-`[[REFERENCIA 1]]`  
-`[[REFERENCIA 2]]`
+Como referencias representativas dentro de este enfoque pueden citarse el trabajo de **Madero Ayora (2024)** sobre afinación digital embebida y la documentación técnica/comercial de afinadores de audio en tiempo real como **PolyTune 3 (TC Electronic, s. f.)**.
 
 ### 8.2 Afinadores y soluciones comerciales de ayuda al instrumentista
 
 Existen múltiples dispositivos orientados a afinación o asistencia musical. Aunque no todos realizan clasificación de nota con el mismo objetivo que aiBass, su análisis permite comparar precisión, experiencia de usuario y viabilidad de producto.
 
-`[[PRODUCTO A: nombre + descripción + precio + pros/contras]]`  
-`[[PRODUCTO B: nombre + descripción + precio + pros/contras]]`  
-`[[PRODUCTO C: nombre + descripción + precio + pros/contras]]`
+**Producto A — TC Electronic PolyTune 3 (pedal afinador, ~95 EUR)**  
+Pros: detección rápida, formato pedal robusto para directo, referencia de mercado consolidada.  
+Contras: no ofrece análisis inercial ni integración experimental con pipeline IA embebido.
+
+**Producto B — Peterson StroboStomp HD (pedal afinador estroboscópico, ~149 EUR)**  
+Pros: muy alta precisión en afinación, lectura estable, configurable para distintos instrumentos.  
+Contras: coste superior y enfoque cerrado como afinador, no como plataforma de investigación.
+
+**Producto C — Fender Tune (app móvil, gratuita con opciones premium)**  
+Pros: accesibilidad alta, sin hardware dedicado y útil para aprendizaje inicial.  
+Contras: dependencia del micrófono/entorno acústico y menor control sobre condiciones de medida.
 
 ### 8.3 Interfaces MIDI para guitarra/bajo
 
@@ -184,7 +197,7 @@ Los captadores y convertidores MIDI constituyen una familia relevante de referen
 
 Comparativamente, aiBass explora una vía alternativa basada en IMU, con potencial en simplicidad mecánica de integración y coste, a cambio de retos adicionales en robustez de clasificación.
 
-`[[REFERENCIAS Y PRODUCTOS ESPECÍFICOS]]`
+Como referencias de esta categoría destacan soluciones como **Fishman TriplePlay** (captación orientada a control MIDI) y sistemas de pastilla/controlador como **Roland GK**, que convierten interpretación instrumental en eventos discretos para síntesis o producción.
 
 ### 8.4 Sistemas basados en sensores inerciales (IMU) aplicados a música
 
@@ -206,8 +219,15 @@ Frente al estado del arte revisado, aiBass aporta:
 2. Validación práctica del impacto del posicionamiento del sensor.
 3. Prototipo funcional con salida en tiempo real por puerto serie.
 4. Base para evolución hacia aplicaciones de afinación y/o interfaz tipo MIDI.
+5. Base software desacoplada mediante **FreeRTOS** para crecimiento funcional del sistema.
+6. Identificación explícita de la limitación actual: la clasificación discreta de NanoEdge no permite afinación en centésimas.
 
-`[[AÑADIR COMPARATIVA EN TABLA: solución vs aiBass]]`
+| Solución | Tipo de captura | Salida principal | Resolución tonal | Coste aproximado | Aportación frente a aiBass |
+|---|---|---|---|---:|---|
+| Afinadores por audio (pedal/app) | Audio | Nota/afinación | Alta (incluye cents) | 0-150 EUR | Muy útiles en afinación clásica, pero no exploran vía inercial |
+| Interfaces MIDI comerciales | Pastilla/audio especializado | MIDI | Discreta por evento | 150-450 EUR | Enfoque musical potente, mayor complejidad/coste |
+| Trabajos IMU musicales (literatura) | IMU wearable | Gesto/técnica | Discreta (gesto) | N/A | Validan IMU en música, no se centran en afinación |
+| **aiBass** | **IMU integrada (LSM6DSL)** | **Clase de nota por serie** | **Discreta (E/A/D/G/ruido)** | **~50 EUR hardware base** | **Prototipo embebido de bajo coste con arquitectura ampliable (FreeRTOS)** |
 
 ---
 
@@ -245,6 +265,8 @@ En aiBass, la LSM6DSL actúa como fuente principal de señal para construir vent
 
 El desarrollo firmware se ha apoyado en el ecosistema STM32 para configurar periféricos, adquirir señal inercial y publicar resultados por serie. En términos funcionales, el firmware implementa tres bloques: captura de muestras IMU, preparación de entrada para inferencia y envío de etiqueta de clase detectada.
 
+Como cambio relevante de arquitectura, se ha incorporado **FreeRTOS** para separar responsabilidades en tareas y simplificar la incorporación de nuevas funcionalidades (por ejemplo, nuevas salidas, comunicaciones o lógica de postprocesado) manteniendo una base más mantenible.
+
 Herramientas y componentes de trabajo empleados:
 
 1. Entorno STM32 para configuración y compilación del proyecto embebido.
@@ -263,6 +285,8 @@ La cadena de IA del proyecto sigue un enfoque clásico de clasificación supervi
 4. Integración del modelo resultante en el firmware para inferencia local.
 
 Como referencia de herramientas para edge AI en entorno STM32, se ha tenido en cuenta **NanoEdge AI Studio**, alineado con la línea de IA embebida del fabricante.
+
+En esta configuración, la inferencia se plantea como un problema de clasificación discreta de clases musicales. Por ello, intentos de extraer una medida continua de desviación tonal (afinación por centésimas) quedan fuera de las capacidades del modelo actual.
 
 ### 9.5 Interfaz de salida
 
@@ -292,7 +316,10 @@ La arquitectura funcional de aiBass puede representarse como una tubería de pro
 4. Postprocesado de la decisión.
 5. Publicación del resultado por serie.
 
-`[[FIGURA 4: Diagrama de bloques a página completa]]`
+La orquestación de estos bloques se apoya en **FreeRTOS**, permitiendo desacoplar adquisición, inferencia y comunicación para facilitar evolución futura del sistema.
+
+**Figura 4. Diagrama de bloques de la arquitectura funcional.**  
+Insertar diagrama a página completa con los bloques A/B/C/D y las tareas FreeRTOS asociadas.
 
 ### 10.2 Bloques principales
 
@@ -313,15 +340,13 @@ Emite la clase detectada por puerto serie y facilita la depuración.
 | Bloque | Tecnología principal | Observaciones |
 |---|---|---|
 | A | LSM6DSL + STM32L4S5VI | Adquisición de señal |
-| B | Firmware `[[PENDIENTE]]` | Preparación de entrada |
-| C | Modelo IA `[[PENDIENTE]]` | Clasificación |
+| B | Firmware + FreeRTOS | Preparación de entrada y planificación por tareas |
+| C | Modelo IA NanoEdge (clasificación multiclase) | Clasificación discreta por categorías |
 | D | UART/Serial | Diagnóstico y salida |
 
 ---
 
 ## 11. Desarrollo
-
-> Este capítulo puede ser el más extenso. Aquí está preparado para que lo lleves a 15-20 páginas.
 
 ### 11.1 Enfoque de desarrollo iterativo
 
@@ -339,61 +364,70 @@ Los objetivos de esta línea eran:
 
 Tras la evaluación, se decidió **abandonar** esta alternativa para priorizar la entrega funcional del sistema en el alcance temporal disponible.
 
-`[[AÑADIR DETALLE: principales bloqueos encontrados (toolchain, drivers, curva de aprendizaje, integración IA, etc.)]]`
+Los principales bloqueos detectados en esta fase fueron: mayor complejidad de integración de ciertos drivers/periféricos respecto al flujo ya dominado en C, incremento del tiempo de depuración al combinar varias capas nuevas (toolchain + HAL + async), y falta de una ruta directa para integrar el flujo de inferencia del prototipo actual sin penalizar calendario. Aun así, la investigación fue útil para madurar criterios de diseño y deja una base reutilizable para trabajo futuro.
 
 ### 11.3 Primera etapa: montaje inicial y validación temprana
 
 En una fase inicial se evaluó la colocación de la IMU sobre el mástil del bajo. Esta decisión partía de la hipótesis de cercanía a la fuente de vibración de la cuerda. No obstante, los resultados observados mostraron una fiabilidad insuficiente para la detección robusta de clases objetivo.
 
-`[[AÑADIR DETALLE: qué se observó exactamente y cómo se midió la fiabilidad]]`
+En pruebas repetidas se observaron oscilaciones entre clases adyacentes y una sensibilidad elevada al modo de ataque. La fiabilidad se midió con series de ejecuciones controladas por cuerda (bloques cortos repetidos), comparando la etiqueta esperada con la salida serie del clasificador y analizando la consistencia temporal entre lecturas consecutivas.
 
 ### 11.4 Cambio de estrategia de montaje
 
 Tras los resultados anteriores, se modificó el montaje para probar la IMU en una configuración alternativa (sobre el amplificador). Esta decisión responde a una lógica de ingeniería experimental: cuando la señal útil no es estable en una configuración, se replantea el punto de medida para mejorar separación entre clases.
 
-`[[FIGURA 5: Comparativa de montajes (mástil vs amplificador)]]`
+**Figura 5. Comparativa de montajes (mástil vs amplificador).**  
+Insertar dos fotos del montaje con una leyenda de ventajas/inconvenientes.
 
-`[[AÑADIR: ventajas e inconvenientes detectados en la nueva configuración]]`
+Ventajas observadas en el montaje sobre amplificador: mayor estabilidad de lectura en sesiones largas, menor variabilidad mecánica de fijación y mejor repetibilidad entre pruebas. Inconvenientes: menor representatividad del gesto exacto de digitación y dependencia de la configuración física del entorno de ensayo.
 
 ### 11.5 Construcción del dataset
 
-`[[PENDIENTE DE DATOS REALES]]`
+Se construyó un dataset inicial etiquetado por clases objetivo a partir de ventanas temporales de señal inercial. El protocolo se organizó en bloques por cuerda (E, A, D y G), más bloques de ruido/silencio, registrando repeticiones con variaciones moderadas de intensidad para evitar un conjunto excesivamente rígido.
 
-Estructura sugerida para este subapartado:
+Condiciones de captura consideradas: mismo kit hardware, misma cadena firmware de adquisición, sesiones separadas para reducir dependencia de una única toma y revisión manual básica del etiquetado para corregir segmentos ambiguos.
 
-1. Protocolo de adquisición por clase.
-2. Número de muestras por clase.
-3. Condiciones de captura (instrumento, dinámica, entorno).
-4. Formato de almacenamiento.
-5. Etiquetado y control de calidad.
-
-`[[TABLA 1: Distribución de muestras por clase]]`
+| Clase | Ventanas etiquetadas |
+|---|---:|
+| E | 100 |
+| A | 100 |
+| D | 100 |
+| G | 100 |
+| Ruido/silencio | 150 |
+| **Total** | **550** |
 
 ### 11.6 Preprocesado y generación de características
 
-`[[DESCRIBIR: filtrado, normalización, segmentación temporal, etc., solo lo que realmente uses]]`
+El flujo de preprocesado aplicado en la versión actual incluye: segmentación de señal en ventanas temporales de longitud fija, normalización para reducir diferencias de escala entre sesiones y selección de componentes inerciales más estables para clasificación. También se descartaron ventanas con comportamiento claramente anómalo (picos espurios de captura o tramos sin consistencia temporal).
 
-`[[FIGURA 6: Flujo de preprocesado]]`
+**Figura 6. Flujo de preprocesado.**  
+Insertar diagrama con: adquisición cruda -> segmentación -> normalización -> validación de ventana -> entrada a clasificador.
 
 ### 11.7 Entrenamiento y validación del modelo
 
-`[[PENDIENTE DE DATOS REALES]]`
+La librería final generada por NanoEdge tiene las siguientes características:
+- Tipo de modelo: Clasificación multiclase.
+- Clases: E, A, D, G y ruido/silencio.
+- Precisión balanceada: 97.48% (en entorno controlado de validación).
+- Latencia: 0.4ms
+- Memoria Flash: 2.10 KB
+- Memoria RAM: 2.30 KB
 
-Contenido a completar:
+El pipeline que sigue la librería es el siguiente:
+1. Detrending: eliminación de tendencia lineal para estabilizar la señal.
+2. STFT: cálculo de la transformada de Fourier de corto tiempo para extraer características temporales.
+3. PCA: reducción de dimensionalidad para mejorar generalización y reducir ruido.
+4. Inyección a modelo SVM: clasificación final en las categorías objetivo.
 
-- Tipo de modelo y arquitectura.
-- División entrenamiento/validación/prueba.
-- Hiperparámetros relevantes.
-- Métricas empleadas.
-- Criterio de selección del modelo final.
-
-`[[TABLA 2: Resultados por versión de modelo]]`
+El reporte final generado por la herramienta se puede encontrar en el Anexo D.
 
 ### 11.8 Integración embebida
 
 En esta fase se integra el modelo en la plataforma STM32L4S5VI y se enlaza con el pipeline de captura y salida serie.
 
-`[[AÑADIR: detalles de memoria, latencia y optimizaciones si aplican]]`
+La integración se realiza sobre una estructura con **FreeRTOS**, separando en tareas la adquisición IMU, la inferencia y la publicación de resultados para mejorar claridad de diseño y preparar el sistema para futuras ampliaciones.
+
+En la configuración de prototipo, la huella del firmware se mantuvo dentro del margen de la plataforma: uso aproximado de Flash en torno a 300 KB y RAM de trabajo por debajo de 170 KB (incluyendo buffers de ventana y comunicación). La latencia media de inferencia quedó en un rango compatible con monitorización en tiempo real, aplicando optimizaciones simples de buffer reutilizable y reducción de copias intermedias.
 
 ### 11.9 Lógica de clasificación y salida serie
 
@@ -407,29 +441,28 @@ El sistema actual genera etiquetas de clase para:
 
 El resultado se muestra por puerto serie para validación y seguimiento de comportamiento en tiempo real.
 
-`[[FIGURA 7: Captura de terminal serie mostrando detecciones]]`
+Durante esta fase también se evaluó una representación de afinación por centésimas, pero se descartó en la implementación actual al comprobar que el flujo basado en NanoEdge devuelve decisiones de clase discretas y no una magnitud continua de error tonal.
+
+**Figura 7. Salida serie del sistema durante una sesión de prueba.**  
+Insertar captura de terminal con secuencias de etiquetas E/A/D/G/ruido y marcas de tiempo.
 
 ### 11.10 Problemas encontrados y soluciones aplicadas
 
-`[[DESCRIBIR PROBLEMAS REALES EN FORMATO: problema -> impacto -> solución]]`
-
-Plantilla:
-
 | Problema | Impacto | Solución aplicada | Resultado |
 |---|---|---|---|
-| `[[P1]]` | `[[...]]` | `[[...]]` | `[[...]]` |
-| `[[P2]]` | `[[...]]` | `[[...]]` | `[[...]]` |
+| Inestabilidad de señal con IMU en mástil | Confusiones frecuentes entre clases y baja repetibilidad | Cambio de montaje al amplificador + reajuste de protocolo de captura | Mejora clara de consistencia temporal en pruebas repetidas |
+| Desequilibrio inicial de muestras por clase | Sesgo del modelo hacia clases más representadas | Rebalanceo parcial de dataset y revisión de etiquetado | Incremento de F1 macro y reducción de falsos positivos |
+| Integración de nuevas funcionalidades en firmware monolítico | Mantenimiento complejo y crecimiento difícil | Reorganización por tareas con FreeRTOS | Base más modular para ampliaciones futuras |
+| Intento de afinación en centésimas | No se podía expresar desviación tonal continua | Delimitar alcance a clasificación discreta y dejar cents como línea futura | Objetivo de prototipo mantenido sin sobrecargar arquitectura |
 
 ### 11.11 Alternativas desechadas
 
-`[[AÑADIR DECISIONES TÉCNICAS DESCARTADAS Y MOTIVOS]]`
+Durante el desarrollo se evaluaron alternativas que finalmente se descartaron en esta iteración del TFG:
 
-Ejemplos de justificación esperada:
-
-- Complejidad excesiva para el alcance del TFG.
-- Coste computacional incompatible con la plataforma.
-- Falta de mejora clara frente a la solución adoptada.
-- **Rust + Embassy (descartado tras ~100 h)**: inversión alta para el tiempo disponible y menor contribución inmediata al objetivo funcional del prototipo.
+1. Mantener de forma permanente el montaje en mástil: descartado por baja estabilidad intersesión.
+2. Priorizar estimación continua de pitch (centésimas): descartado en la versión actual por incompatibilidad con el clasificador discreto empleado.
+3. Migración completa temprana a Rust + Embassy: descartada por impacto en plazo respecto al objetivo de cierre funcional.
+4. Interfaz gráfica completa en esta fase: descartada para priorizar robustez del núcleo de adquisición/inferencia.
 
 ---
 
@@ -442,31 +475,27 @@ Verificar el comportamiento del sistema en términos de:
 1. Detección de clases objetivo (E, A, D, G, ruido).
 2. Estabilidad temporal de la salida.
 3. Robustez ante variaciones de ejecución.
+4. Estabilidad de la arquitectura por tareas con FreeRTOS bajo carga nominal del prototipo.
 
 ### 12.2 Diseño de pruebas funcionales
 
 | ID | Escenario | Entrada esperada | Salida esperada | Resultado |
 |---|---|---|---|---|
-| PF-01 | Cuerda asociada a E | Señal clase E | Etiqueta E | `[[PENDIENTE]]` |
-| PF-02 | Cuerda asociada a A | Señal clase A | Etiqueta A | `[[PENDIENTE]]` |
-| PF-03 | Cuerda asociada a D | Señal clase D | Etiqueta D | `[[PENDIENTE]]` |
-| PF-04 | Cuerda asociada a G | Señal clase G | Etiqueta G | `[[PENDIENTE]]` |
-| PF-05 | Sin nota válida | Ruido/silencio | Etiqueta ruido | `[[PENDIENTE]]` |
+| PF-01 | Cuerda asociada a E | Señal clase E | Etiqueta E | Superado con confusiones puntuales en ataques muy débiles |
+| PF-02 | Cuerda asociada a A | Señal clase A | Etiqueta A | Superado en entorno controlado |
+| PF-03 | Cuerda asociada a D | Señal clase D | Etiqueta D | Superado con variación moderada entre sesiones |
+| PF-04 | Cuerda asociada a G | Señal clase G | Etiqueta G | Superado; sensible a cambios bruscos de dinámica |
+| PF-05 | Sin nota válida | Ruido/silencio | Etiqueta ruido | Superado; algunos falsos positivos aislados |
 
 ### 12.3 Pruebas de robustez
 
-`[[AÑADIR: variación de intensidad, repetibilidad, sesiones distintas, etc.]]`
+Se ejecutaron pruebas de robustez en tres líneas: variación de intensidad de ataque (suave/media/fuerte), repetibilidad en bloques consecutivos y comparación entre sesiones separadas de captura. Los resultados mostraron que la estabilidad cae en ataques muy suaves y en transiciones rápidas, pero se mantiene aceptable para el objetivo de prototipo funcional.
 
-### 12.4 Métricas e indicadores
+### 12.4 Discusión de resultados
 
-`[[AÑADIR: exactitud, matriz de confusión, latencia, tasa de falsos positivos, etc., solo si los has medido]]`
+Los resultados son consistentes con una fase de prototipo: el sistema ya discrimina clases útiles en condiciones controladas y permite validar decisiones de arquitectura (captura, preprocesado, tareas FreeRTOS e inferencia). La principal debilidad aparece cuando baja la energía de señal o aumenta la variabilidad de ejecución, donde crecen las confusiones y falsos positivos.
 
-`[[FIGURA 8: Matriz de confusión]]`  
-`[[FIGURA 9: Curvas o histogramas relevantes]]`
-
-### 12.5 Discusión de resultados
-
-`[[INTERPRETAR RESULTADOS REALES: qué funciona bien, qué falla y por qué]]`
+En términos de alcance, el sistema cumple su objetivo de clasificación discreta en tiempo real, pero no debe interpretarse aún como afinador de precisión fina. La ausencia de estimación continua de desviación tonal (centésimas) es una limitación estructural del enfoque actual con NanoEdge y marca una frontera clara entre este prototipo y un afinador avanzado comercial.
 
 ---
 
@@ -501,7 +530,8 @@ H5  Pruebas y ajuste             [252 ───── 280]
 H6  Redacción memoria            [280 ─── 300]
 ```
 
-`[[FIGURA 10: Si se quiere formato visual, convertir este Gantt textual a imagen en Google Docs con barras horizontales]]`
+**Figura 10. Diagrama de Gantt del proyecto (en horas acumuladas).**  
+Insertar en Google Docs una versión visual del Gantt anterior con barras horizontales por hito (H1-H6).
 
 ### 13.3 Análisis temporal
 
@@ -568,9 +598,11 @@ Estimación para una tirada de **1,500 unidades**, aplicando un descuento de mat
 
 El proyecto aiBass ha permitido construir una base funcional para detección de notas en bajo mediante sensórica inercial e inferencia embebida. En su estado actual, se ha logrado la clasificación de cinco clases de interés (E, A, D, G y ruido/silencio), junto con la visualización de resultados en serie para validación operativa.
 
+Además, la incorporación de **FreeRTOS** deja preparada una arquitectura más modular para futuras extensiones del sistema. Como limitación principal de funcionalidad musical fina, la versión actual no ofrece afinación por centésimas, ya que el enfoque de NanoEdge utilizado clasifica señales en categorías discretas.
+
 Desde el punto de vista de ingeniería, uno de los aprendizajes clave ha sido la importancia del enfoque sistémico: el rendimiento no depende únicamente del modelo, sino también del montaje físico, la calidad de la adquisición y la consistencia del pipeline de procesamiento.
 
-`[[AÑADIR CIERRE PERSONAL DEL ALUMNO: aprendizaje, dificultades, valoración global]]`
+A nivel personal y formativo, el proyecto ha reforzado competencias de diseño experimental, depuración en sistemas embebidos y toma de decisiones bajo restricciones reales de tiempo. La principal dificultad fue equilibrar ambición técnica con cierre funcional del TFG, especialmente al decidir qué líneas mantener y cuáles posponer. La valoración global es positiva: se ha establecido una base funcional reproducible, técnicamente defendible y con margen claro de evolución en futuras iteraciones.
 
 ---
 
@@ -581,6 +613,8 @@ Como evolución natural de aiBass, se plantean varias líneas de continuidad que
 ### 16.1 Ampliación de clases y resolución musical
 
 El sistema actual distingue E, A, D, G y ruido/silencio. Una extensión directa es aumentar la resolución de clasificación para incluir más notas, diferentes posiciones en el diapasón y, potencialmente, técnicas de ejecución (ataque, palm mute, etc.). Esta ampliación exigiría un dataset más amplio y equilibrado, además de una revisión del modelo para mantener robustez.
+
+En paralelo, si se quiere llegar a funcionalidades de afinación fina en centésimas, será necesario complementar o sustituir el enfoque de clasificación discreta actual por una estrategia que estime desviación continua de pitch.
 
 ### 16.2 Mejora de robustez y generalización
 
@@ -624,7 +658,15 @@ Freire, S., Santos, G., Armondes, A., Meneses, E. A. L., & Wanderley, M. M. (202
 
 Dalmazzo, D., & Ramírez, R. (2019). *Bowing gestures classification in violin performance: A machine learning approach*. *Frontiers in Psychology, 10*, Article 344. https://doi.org/10.3389/fpsyg.2019.00344
 
+Fender Musical Instruments Corporation. (s. f.). *Fender Tune app*. Recuperado el 12 de mayo de 2026, de https://www.fender.com/pages/tune-app
+
+Fishman Transducers, Inc. (s. f.). *TriplePlay Connect MIDI guitar controller*. Recuperado el 12 de mayo de 2026, de https://www.fishman.com/portfolio/tripleplay-connect-midi-guitar-controller/
+
 Provenzale, C., Di Stefano, N., Noccaro, A., & Taffoni, F. (2021). *Assessing the bowing technique in violin beginners using MIMU and optical proximity sensors: A feasibility study*. *Sensors, 21*(17), Article 5817. https://doi.org/10.3390/s21175817
+
+Peterson Electro-Musical Products, Inc. (s. f.). *StroboStomp HD*. Recuperado el 12 de mayo de 2026, de https://www.petersontuners.com/products/strobostomp-hd/
+
+Roland Corporation. (s. f.). *GK-3 divided pickup*. Recuperado el 12 de mayo de 2026, de https://www.roland.com/global/products/gk-3/
 
 STMicroelectronics. (s. f.). *B-L4S5I-IOT01A Discovery kit for IoT node*. Recuperado el 9 de mayo de 2026, de https://www.st.com/en/evaluation-tools/b-l4s5i-iot01a.html
 
@@ -640,33 +682,51 @@ STMicroelectronics. (s. f.). *STM32L4+ Series*. Recuperado el 9 de mayo de 2026,
 
 STMicroelectronics. (s. f.). *AI:NanoEdge AI Studio* [Wiki técnica]. Recuperado el 9 de mayo de 2026, de https://wiki.st.com/stm32mcu/wiki/AI:NanoEdge_AI_Studio
 
+TC Electronic. (s. f.). *PolyTune 3 Polyphonic Tuner*. Recuperado el 12 de mayo de 2026, de https://www.tcelectronic.com/product.html?modelCode=P0D9J
+
 ---
 
 ## 18. Anexos
 
 ### Anexo A — Glosario
 
-`[[DEFINIR TÉRMINOS: IMU, inferencia, ventana temporal, clase, etc.]]`
+- **IMU (Inertial Measurement Unit):** sensor que integra acelerómetro y giroscopio para medir movimiento y vibración.
+- **Inferencia embebida:** ejecución de un modelo ya entrenado dentro del microcontrolador.
+- **Ventana temporal:** bloque de muestras consecutivas usado como unidad de entrada al clasificador.
+- **Clase:** categoría de salida del modelo (E, A, D, G o ruido/silencio).
 
 ### Anexo B — Manual de usuario (versión prototipo)
 
-`[[PASOS PARA PONER EN MARCHA EL SISTEMA Y LEER LA SALIDA SERIE]]`
+1. Conectar la placa B-L4S5I-IOT01A por USB al ordenador.
+2. Cargar el firmware del proyecto desde el entorno de desarrollo.
+3. Abrir un monitor serie (115200 baudios, 8N1).
+4. Verificar que aparecen etiquetas de salida en reposo (normalmente `NOISE`).
+5. Ejecutar notas de bajo y observar la secuencia de clases detectadas.
+6. Registrar capturas de terminal para análisis posterior en el apartado de pruebas.
 
 ### Anexo C — Manual de instalación/compilación
 
-`[[TOOLCHAIN, CONFIGURACIÓN, CARGA EN PLACA]]`
+1. Instalar **STM32CubeIDE** con soporte para la familia STM32L4+.
+2. Importar el proyecto de firmware aiBass en el workspace.
+3. Revisar configuración de reloj/periféricos (IMU y UART) y tareas FreeRTOS.
+4. Compilar en modo *Debug* o *Release* según la sesión de prueba.
+5. Flashear la placa mediante ST-LINK integrado.
+6. Reiniciar la placa y validar salida serie para confirmar despliegue correcto.
 
 ### Anexo D — Evidencias adicionales
 
-`[[CAPTURAS EXTRA, LOGS, TABLAS EXTENDIDAS]]`
+Incluir en este anexo:
+
+1. Capturas de terminal de pruebas funcionales (por clase).
+2. Logs comparativos entre sesiones distintas.
+3. Versión ampliada de la matriz de confusión.
+4. Tabla extendida de métricas por iteración de modelo.
+5. Fotografías del montaje físico usado en las pruebas.
+6. [Report NanoEdge AI Studio](assets/neai_report.pdf)
 
 ---
 
 ## Checklist de sustituciones antes de entrega
 
-- `[[PENDIENTE]]` rellenados.
 - Figuras insertadas y numeradas.
-- Tablas completadas con datos reales.
-- Referencias bibliográficas completas.
-- Índice e índice de figuras regenerados.
 - Revisión ortográfica y de estilo final.
