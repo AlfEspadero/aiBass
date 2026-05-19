@@ -188,9 +188,15 @@ Comparativamente, aiBass explora una vía alternativa basada en IMU, con potenci
 
 ### 8.4 Sistemas basados en sensores inerciales (IMU) aplicados a música
 
-La literatura de interacción musical con IMU suele enfocarse en control gestual, seguimiento de movimiento o mapeos expresivos. El uso específico para clasificación de nota en bajo es menos habitual y, por ello, aporta interés diferencial.
+Como referencia cercana en el dominio musical, puede citarse el TFG de **Madero Ayora (2024)** sobre un afinador electrónico embebido. Aunque comparte el objetivo de apoyo al instrumentista, su enfoque técnico se basa en una cadena diferente a aiBass, por lo que sirve como antecedente de contexto más que como réplica metodológica directa.
 
-`[[RESUMEN DE 2-3 TRABAJOS ACADÉMICOS CERCANOS]]`
+Entre los trabajos centrados explícitamente en IMU aplicadas a interpretación musical, **Freire et al. (2020)** evalúan la captura de gestos de rasgueo de guitarra con sensores inerciales frente a captura óptica de movimiento. Este trabajo aporta una validación experimental sólida de la utilidad de la IMU en tareas musicales reales, aunque su foco principal es la caracterización del gesto y no la clasificación de notas discretas.
+
+En la línea de aprendizaje automático sobre datos de movimiento musical, **Dalmazzo y Ramírez (2019)** proponen la clasificación de gestos de arco en violín. El valor de este antecedente para aiBass está en demostrar que la señal gestual wearable puede transformarse en categorías interpretativas útiles mediante modelos de clasificación, si bien el problema objetivo difiere del reconocimiento de notas fundamentales en bajo.
+
+De forma complementaria, **Provenzale et al. (2021)** estudian la técnica de arco en violinistas principiantes combinando MIMU y sensores de proximidad. Su contribución principal es metodológica: evidencian que la sensórica de bajo coste puede usarse para evaluación técnica y feedback, lo que refuerza la viabilidad de sistemas de asistencia musical basados en movimiento.
+
+En síntesis, el estado del arte revisado confirma que las IMU son una tecnología válida para análisis musical y entrenamiento instrumental, pero deja menos cubierto el caso específico de **clasificación embebida de notas de bajo** en tiempo real. Precisamente ahí se sitúa la aportación de aiBass.
 
 ### 8.5 Aportación diferencial de aiBass
 
@@ -209,44 +215,68 @@ Frente al estado del arte revisado, aiBass aporta:
 
 ### 9.1 Plataforma embebida principal
 
-**Microcontrolador/placa**: **STM32L4S5VI**.
+La plataforma principal de desarrollo es el **Discovery kit B-L4S5I-IOT01A**, basado en el microcontrolador **STM32L4S5VIT6** (familia STM32L4+, núcleo Arm Cortex-M4). Esta placa integra recursos suficientes para un prototipo de IA embebida y, al mismo tiempo, mantiene un enfoque de bajo consumo.
 
-`[[DESCRIBIR: CPU, memoria, periféricos usados, consumo, por qué se eligió]]`
+Desde el punto de vista práctico, su elección encaja muy bien con el alcance del TFG por tres motivos: integra sensórica directamente en placa (incluida la IMU LSM6DSL), dispone de herramientas de depuración y programación integradas (ST-LINK) y permite iterar rápido en firmware sin depender de hardware externo adicional.
 
-`[[FIGURA 2: Foto de la placa]]`
+Características destacables para este trabajo:
+
+1. Microcontrolador STM32L4S5VIT6 con **2 MB de Flash** y **640 KB de RAM**.
+2. Sensores integrados en la placa, incluyendo IMU, útiles para pruebas iniciales y validación rápida.
+3. Conectividad y expansión (USB, cabeceras, conectores de expansión), que facilitan pruebas y evolución del prototipo.
+4. Ecosistema software maduro (STM32Cube y documentación oficial), adecuado para desarrollo académico.
+
+![Figura 2. Discovery kit B-L4S5I-IOT01A (fuente: STMicroelectronics)](https://www.st.com/bin/ecommerce/api/image.PF270120.en.feature-description-include-personalized-no-cpn-large.jpg)
 
 ### 9.2 Sensor inercial
 
-**IMU**: **LSM6DSL**.
+La IMU empleada es la **LSM6DSL**, un módulo inercial de 6 ejes (acelerómetro 3D + giroscopio 3D). Para este proyecto resulta especialmente adecuada por su equilibrio entre prestaciones, consumo y disponibilidad dentro del propio kit de desarrollo.
 
-`[[DESCRIBIR: acelerómetro/giroscopio, rango, frecuencia de muestreo usada, interfaz (I2C/SPI), resolución]]`
+De acuerdo con la documentación del fabricante, el sensor permite:
 
-`[[FIGURA 3: Foto del sensor / ubicación de montaje]]`
+1. Rangos de aceleración de **±2/±4/±8/±16 g**.
+2. Rangos de velocidad angular de **±125/±245/±500/±1000/±2000 dps**.
+3. Operación en modo de altas prestaciones con consumo reducido (orden de mA bajo).
+4. Funciones orientadas a adquisición continua y almacenamiento por lotes para análisis temporal.
+
+En aiBass, la LSM6DSL actúa como fuente principal de señal para construir ventanas temporales que posteriormente se clasifican en las clases musicales objetivo.
 
 ### 9.3 Firmware y herramientas de desarrollo
 
-- Lenguaje principal: `[[PENDIENTE]]`
-- Entorno de desarrollo: `[[PENDIENTE]]`
-- Librerías HAL/Drivers: `[[PENDIENTE]]`
-- Sistema de adquisición/registro de muestras: `[[PENDIENTE]]`
-- Línea investigada y descartada: **Rust + Embassy** (aprox. **100 h** de investigación).
+El desarrollo firmware se ha apoyado en el ecosistema STM32 para configurar periféricos, adquirir señal inercial y publicar resultados por serie. En términos funcionales, el firmware implementa tres bloques: captura de muestras IMU, preparación de entrada para inferencia y envío de etiqueta de clase detectada.
+
+Herramientas y componentes de trabajo empleados:
+
+1. Entorno STM32 para configuración y compilación del proyecto embebido.
+2. Drivers/periféricos para lectura del sensor inercial y comunicación UART.
+3. Flujo de depuración iterativo con salida serie para validación del comportamiento en tiempo real.
+
+Además, el proyecto incorporó una fase específica de evaluación de una alternativa tecnológica basada en **Rust + Embassy** (aprox. 100 h), inicialmente descartada para el cierre del prototipo, pero considerada relevante para evolución futura.
 
 ### 9.4 Pipeline de IA
 
-- Framework de entrenamiento: `[[PENDIENTE]]`
-- Tipo de modelo: `[[PENDIENTE]]`
-- Formato de exportación a embebido: `[[PENDIENTE]]`
-- Estrategia de inferencia en dispositivo: `[[PENDIENTE]]`
+La cadena de IA del proyecto sigue un enfoque clásico de clasificación supervisada adaptado a restricciones embebidas:
+
+1. Captura de señal inercial y segmentación en ventanas temporales.
+2. Etiquetado por clases objetivo (E, A, D, G y ruido/silencio).
+3. Entrenamiento iterativo fuera del microcontrolador.
+4. Integración del modelo resultante en el firmware para inferencia local.
+
+Como referencia de herramientas para edge AI en entorno STM32, se ha tenido en cuenta **NanoEdge AI Studio**, alineado con la línea de IA embebida del fabricante.
 
 ### 9.5 Interfaz de salida
 
-- Medio actual: **salida serie**.
-- Formato de mensajes: `[[PENDIENTE]]`
-- Frecuencia de actualización: `[[PENDIENTE]]`
+La interfaz actual de interacción es **serial (UART)**, orientada a depuración y validación rápida de resultados. La salida se emite en formato textual con la clase detectada en cada instante de decisión, lo que permite revisar de forma inmediata la estabilidad del sistema durante las pruebas.
+
+Este enfoque simplifica el ciclo de experimentación: facilita observar errores de clasificación, comparar comportamientos entre montajes físicos y ajustar el pipeline sin necesidad de una interfaz gráfica compleja.
 
 ### 9.6 Tecnologías auxiliares
 
-`[[AÑADIR: scripts de procesado, herramientas de visualización, control de versiones, etc.]]`
+Como soporte al desarrollo se han utilizado tecnologías auxiliares de uso habitual en proyectos software/embebidos:
+
+1. **Git y GitHub** para control de versiones y trazabilidad del desarrollo.
+2. Herramientas de tratamiento de datos para organizar muestras y resultados experimentales.
+3. Documentación técnica del ecosistema STM32 y de la sensórica empleada para guiar decisiones de diseño.
 
 ---
 
@@ -546,28 +576,69 @@ Desde el punto de vista de ingeniería, uno de los aprendizajes clave ha sido la
 
 ## 16. Trabajo futuro
 
-Líneas propuestas para continuidad del proyecto:
+Como evolución natural de aiBass, se plantean varias líneas de continuidad que permitirían pasar de un prototipo funcional a un sistema más sólido y cercano a uso real.
 
-1. Ampliar el número de clases (más notas/posiciones).
-2. Mejorar robustez frente a variaciones de interpretación y entorno.
-3. Refinar montaje y encapsulado del sensor para uso real en instrumento.
-4. Incorporar una interfaz de usuario más avanzada (más allá de terminal serie).
-5. Evolucionar hacia salida MIDI o integración con DAW.
-6. Validar el sistema con más usuarios e instrumentos.
+### 16.1 Ampliación de clases y resolución musical
 
-`[[PRIORIZAR SEGÚN TIEMPO/COSTE REAL DEL TFG]]`
+El sistema actual distingue E, A, D, G y ruido/silencio. Una extensión directa es aumentar la resolución de clasificación para incluir más notas, diferentes posiciones en el diapasón y, potencialmente, técnicas de ejecución (ataque, palm mute, etc.). Esta ampliación exigiría un dataset más amplio y equilibrado, además de una revisión del modelo para mantener robustez.
+
+### 16.2 Mejora de robustez y generalización
+
+Se propone reforzar la robustez frente a variaciones de interpretación, dinámica de ataque, instrumento y entorno físico. Para ello, sería útil diseñar campañas de captura en distintas condiciones, introducir validación cruzada más exigente y aplicar técnicas de regularización/normalización orientadas a mejorar generalización fuera del entorno de entrenamiento.
+
+### 16.3 Optimización del montaje físico del sensor
+
+La evolución del proyecto ha mostrado que el punto de montaje impacta fuertemente en la calidad de señal. Como trabajo futuro, se plantea un estudio sistemático de ubicaciones con criterios cuantitativos de discriminación entre clases, junto con una solución mecánica estable de fijación para reducir variaciones no controladas entre sesiones.
+
+### 16.4 Evolución de la interfaz de usuario
+
+La salida serie actual es suficiente para depuración, pero limitada para uso final. Una línea de mejora sería desarrollar una interfaz de mayor nivel (aplicación de escritorio o móvil) que muestre historial de detecciones, métricas de confianza y herramientas de apoyo al aprendizaje o afinación.
+
+### 16.5 Integración musical avanzada (MIDI/DAW)
+
+Una evolución especialmente interesante es mapear la clasificación a eventos MIDI para controlar sintetizadores o integrarse con estaciones de audio digital (DAW). Esta línea abriría aplicaciones directas en producción musical y permitiría evaluar el sistema en contextos de interpretación en tiempo real.
+
+### 16.6 Revisión tecnológica de la línea Rust + Embassy
+
+Aunque la investigación inicial en Rust + Embassy se descartó en esta etapa por coste temporal, actualmente ya se dispone de una base técnica más sólida en ese ecosistema. Por ello, se plantea como línea futura prioritaria una reimplementación progresiva del firmware en Rust/Embassy, al menos en módulos críticos de adquisición y comunicaciones.
+
+Esta propuesta está respaldada por experiencia reciente en otro proyecto del autor, donde se realizó una comparación directa **C/FreeRTOS vs Rust/Embassy** sobre una aplicación equivalente de UART. En esa comparación se observaron mejoras relevantes en huella de memoria y tamaño binario para la implementación en Rust, lo que refuerza su interés para futuras iteraciones de aiBass (véase referencia bibliográfica específica al documento [*COMPARISON.md*](https://github.com/AlfEspadero/SETR2-practica4-rust/blob/main/COMPARISON.md)).
+
+### 16.7 Validación con usuarios
+
+Finalmente, se propone realizar pruebas con bajistas de distintos niveles para medir utilidad percibida, facilidad de uso y estabilidad en escenarios reales de práctica. Esta validación serviría para priorizar mejoras con impacto directo en la experiencia de usuario.
 
 ---
 
 ## 17. Bibliografía
 
-`[[AÑADIR REFERENCIAS REALES EN FORMATO CONSISTENTE (APA/IEEE/OTRO)]]`
+Espadero García, A. (s. f.). *aiBass* [Repositorio de software]. GitHub. Recuperado el 9 de mayo de 2026, de https://github.com/AlfEspadero/aiBass
 
-Plantilla recomendada:
+Espadero García, A. (s. f.). *STM32 Embedded Development: C/FreeRTOS vs Rust/Embassy* [Archivo Markdown]. GitHub. Recuperado el 9 de mayo de 2026, de https://github.com/AlfEspadero/SETR2-practica4-rust/blob/main/COMPARISON.md
 
-1. Autor(es), "Título", fuente/editorial, año.
-2. Autor(es), "Título", revista/conferencia, año.
-3. Nombre de recurso web, URL, fecha de consulta.
+Madero Ayora, M. J. (2024). *Desarrollo de un afinador electrónico para instrumento musical basado en DSP TMS320LF28335* [Trabajo Fin de Grado, Universidad de Sevilla]. idUS. https://idus.us.es/items/bf855f16-ea4a-4bed-b7f7-4d550b9813d5
+
+Madero Ayora, M. J. (2024). *Desarrollo de un afinador electrónico para instrumento musical basado en DSP TMS320LF28335* [Documento PDF]. Universidad de Sevilla. https://idus.us.es/server/api/core/bitstreams/678a1ea6-3083-4eab-a3ee-350e4bd36843/content
+
+Freire, S., Santos, G., Armondes, A., Meneses, E. A. L., & Wanderley, M. M. (2020). *Evaluation of inertial sensor data by a comparison with optical motion capture data of guitar strumming gestures*. *Sensors, 20*(19), Article 5722. https://doi.org/10.3390/s20195722
+
+Dalmazzo, D., & Ramírez, R. (2019). *Bowing gestures classification in violin performance: A machine learning approach*. *Frontiers in Psychology, 10*, Article 344. https://doi.org/10.3389/fpsyg.2019.00344
+
+Provenzale, C., Di Stefano, N., Noccaro, A., & Taffoni, F. (2021). *Assessing the bowing technique in violin beginners using MIMU and optical proximity sensors: A feasibility study*. *Sensors, 21*(17), Article 5817. https://doi.org/10.3390/s21175817
+
+STMicroelectronics. (s. f.). *B-L4S5I-IOT01A Discovery kit for IoT node*. Recuperado el 9 de mayo de 2026, de https://www.st.com/en/evaluation-tools/b-l4s5i-iot01a.html
+
+STMicroelectronics. (s. f.). *Board photo for B-L4S5I-IOT01A* [Imagen]. Recuperado el 9 de mayo de 2026, de https://www.st.com/bin/ecommerce/api/image.PF270120.en.feature-description-include-personalized-no-cpn-large.jpg
+
+STMicroelectronics. (s. f.). *LSM6DSL: iNEMO inertial module*. Recuperado el 9 de mayo de 2026, de https://www.st.com/en/mems-and-sensors/lsm6dsl.html
+
+STMicroelectronics. (s. f.). *NanoEdge AI Studio*. Recuperado el 9 de mayo de 2026, de https://stm32ai.st.com/nanoedge-ai/
+
+STMicroelectronics. (s. f.). *STM32Cube embedded software*. Recuperado el 9 de mayo de 2026, de https://www.st.com/en/embedded-software/stm32cube-embedded-software.html
+
+STMicroelectronics. (s. f.). *STM32L4+ Series*. Recuperado el 9 de mayo de 2026, de https://www.st.com/en/microcontrollers-microprocessors/stm32l4-plus-series.html
+
+STMicroelectronics. (s. f.). *AI:NanoEdge AI Studio* [Wiki técnica]. Recuperado el 9 de mayo de 2026, de https://wiki.st.com/stm32mcu/wiki/AI:NanoEdge_AI_Studio
 
 ---
 
