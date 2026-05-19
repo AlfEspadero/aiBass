@@ -75,6 +75,8 @@ Una parte relevante del trabajo se dedicó a estudiar la viabilidad de un enfoqu
 
 El documento describe la motivación del problema, el estado del arte, las tecnologías utilizadas, la arquitectura general, el desarrollo técnico por bloques, el plan de pruebas y la planificación del proyecto, incluyendo una estimación de costes. Finalmente, se recogen conclusiones, limitaciones actuales y posibles líneas de trabajo futuro para mejorar robustez, generalización y aplicabilidad práctica.
 
+Palabras clave: IA embebida, STM32, Afinador, Detección de notas, FreeRTOS
+
 ---
 
 ## 3. Abstract
@@ -90,6 +92,8 @@ From a software architecture perspective, the firmware now includes **FreeRTOS**
 A significant development phase focused on assessing a firmware approach in **Rust with Embassy**. This line of work took approximately **100 hours** and was eventually dropped, as it did not provide the best cost/benefit ratio for delivering the current prototype scope. The total effort considered in this report is approximately **300 hours**.
 
 This report presents the project motivation, state of the art, employed technologies, overall architecture, technical development by modules, testing approach, and project planning, including cost estimation. Finally, conclusions, current limitations, and future work are discussed to improve robustness, generalization, and practical applicability.
+
+Keywords: Embedded AI, STM32, Tuner, Note detection, FreeRTOS
 
 ---
 
@@ -152,6 +156,8 @@ Desde una perspectiva social y tecnológica, iniciativas como aiBass se enmarcan
 
 **Figura 1. Contexto del proyecto y flujo general de uso.**  
 Insertar un diagrama simple con el flujo: *ejecución de nota* -> *captura IMU* -> *preprocesado* -> *clasificación NanoEdge* -> *salida serie*.
+
+![Figura 1.](assets/fig1.png)
 
 La motivación personal del proyecto nace de combinar dos intereses: sistemas embebidos y práctica musical real. El objetivo no era construir solo una demo de IA, sino comprobar hasta qué punto una solución de bajo coste podía ofrecer utilidad práctica para un bajista en sesiones de estudio y validación técnica.
 
@@ -352,6 +358,8 @@ Emite la clase detectada por puerto serie y facilita la depuración.
 
 El desarrollo se abordó de manera incremental: primero asegurar captura estable de señal, después construir un primer clasificador funcional y, finalmente, cerrar el bucle de inferencia en tiempo real con salida observable.
 
+También se trabajó en dos líneas de código diferenciadas: una rama inicial orientada a **DataLogger** (captura/registro sin FreeRTOS) y la rama actual de **clasificador embebido** (con FreeRTOS y salida de clases en tiempo real). Esta separación facilitó mantener un camino estable para adquisición y otro para integración de inferencia.
+
 ### 11.2 Fase de investigación en Rust + Embassy (aprox. 100 horas)
 
 Antes de consolidar la implementación actual, se dedicó una fase extensa a investigar la viabilidad de desarrollar el firmware con **Rust** sobre el ecosistema **Embassy**. Esta fase ocupó cerca de **100 horas** dentro de una dedicación total aproximada de **300 horas** del proyecto.
@@ -427,7 +435,55 @@ En esta fase se integra el modelo en la plataforma STM32L4S5VI y se enlaza con e
 
 La integración se realiza sobre una estructura con **FreeRTOS**, separando en tareas la adquisición IMU, la inferencia y la publicación de resultados para mejorar claridad de diseño y preparar el sistema para futuras ampliaciones.
 
+En `freertos.c`, la coordinación entre tareas se resuelve con mutex y flags de hilo. El flujo principal es: adquirir ventana -> señalizar clasificación -> ejecutar inferencia.
+
+```c
+for (;;) {
+    if (windowMutexHandle != NULL) {
+        osMutexAcquire(windowMutexHandle, osWaitForever);
+    }
+    acquire_window();
+    if (windowMutexHandle != NULL) {
+        osMutexRelease(windowMutexHandle);
+    }
+
+    if (neai_classifyHandle != NULL) {
+        osThreadFlagsSet(neai_classifyHandle, WINDOW_READY_FLAG);
+    }
+    osDelay(1);
+}
+```
+
+```c
+osThreadFlagsWait(WINDOW_READY_FLAG, osFlagsWaitAny, osWaitForever);
+if (windowMutexHandle != NULL) {
+    osMutexAcquire(windowMutexHandle, osWaitForever);
+}
+neai_classification(window, probabilities, &id_class);
+if (windowMutexHandle != NULL) {
+    osMutexRelease(windowMutexHandle);
+}
+```
+
 En la configuración de prototipo, la huella del firmware se mantuvo dentro del margen de la plataforma: uso aproximado de Flash en torno a 300 KB y RAM de trabajo por debajo de 170 KB (incluyendo buffers de ventana y comunicación). La latencia media de inferencia quedó en un rango compatible con monitorización en tiempo real, aplicando optimizaciones simples de buffer reutilizable y reducción de copias intermedias.
+
+Respecto al driver IMU, se partió de la librería docente (`LSM6DSL.c`) y se adaptó para un uso más robusto en entorno multitarea, añadiendo comprobación explícita de *data ready* y espera acotada por timeout:
+
+```c
+HAL_StatusTypeDef LSM6DSL_WaitDataReady(uint32_t timeout_ms) {
+    uint8_t ready = 0;
+    uint32_t start = HAL_GetTick();
+    HAL_StatusTypeDef ret;
+
+    do {
+        ret = LSM6DSL_DataReady(&ready);
+        if (ret != HAL_OK) return ret;
+        if (ready != 0U) return HAL_OK;
+    } while ((HAL_GetTick() - start) < timeout_ms);
+
+    return HAL_TIMEOUT;
+}
+```
 
 ### 11.9 Lógica de clasificación y salida serie
 
@@ -440,6 +496,19 @@ El sistema actual genera etiquetas de clase para:
 - **ruido/silencio**
 
 El resultado se muestra por puerto serie para validación y seguimiento de comportamiento en tiempo real.
+
+Para evitar conflictos de transmisión entre tareas, la salida serie se protege con mutex en `main.c` mediante la sobrecarga de `__io_putchar`:
+
+```c
+if ((osKernelGetState() == osKernelRunning) && (uartTxMutexHandle != NULL)) {
+    if (osMutexAcquire(uartTxMutexHandle, 0U) == osOK) {
+        tx_status = HAL_UART_Transmit(&huart1, &c, 1, 1);
+        (void) osMutexRelease(uartTxMutexHandle);
+    } else {
+        tx_status = HAL_ERROR;
+    }
+}
+```
 
 Durante esta fase también se evaluó una representación de afinación por centésimas, pero se descartó en la implementación actual al comprobar que el flujo basado en NanoEdge devuelve decisiones de clase discretas y no una magnitud continua de error tonal.
 
