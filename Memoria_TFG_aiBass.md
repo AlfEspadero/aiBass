@@ -35,15 +35,15 @@ El proyecto **aiBass** plantea un sistema de inteligencia artificial embebida or
 
 El enfoque del trabajo combina instrumentación física, adquisición de datos, tratamiento de señal e inferencia de un modelo de clasificación en un entorno con restricciones de recursos. Esto sitúa el proyecto en la intersección entre sistemas empotrados, aprendizaje automático aplicado y tecnología musical.
 
-En el estado actual de desarrollo se ha logrado detectar cinco clases de salida: las cuatro notas fundamentales del bajo (**E, A, D, G**) y una clase de **ruido/silencio** (ausencia de nota válida), mostrando el resultado por interfaz serie. Durante el desarrollo se evaluaron diferentes ubicaciones del sensor: una primera etapa con colocación en el mástil ofreció baja fiabilidad, por lo que el prototipado evolucionó hacia una configuración de prueba con el sensor sobre el amplificador.
+En el estado actual de desarrollo se ha logrado detectar cinco clases de salida: las cuatro notas fundamentales del bajo (**E, A, D, G**) y una clase de **ruido/silencio** (ausencia de nota válida). En la iteración más reciente, el resultado ya no depende solo de la consola serie: se publica tanto por UART como mediante una **tira LED WS2812**, lo que permite usar el prototipo sin PC ni depurador conectado. Durante el desarrollo se evaluaron diferentes ubicaciones del sensor: una primera etapa con colocación en el mástil ofreció baja fiabilidad, por lo que el prototipado evolucionó hacia una configuración de prueba con el sensor sobre el amplificador.
 
-A nivel de arquitectura software, el firmware se ha reorganizado para incluir **FreeRTOS**, dejando una base más escalable para incorporar funcionalidades futuras sin reestructuraciones profundas. También se exploró una salida de afinación en **centésimas**, pero la solución actual basada en NanoEdge opera como clasificador discreto de categorías y no proporciona una estimación continua de desviación tonal.
+A nivel de arquitectura software, el firmware se ha reorganizado para incluir **FreeRTOS**, dejando una base más escalable para incorporar funcionalidades futuras sin reestructuraciones profundas. Esta reorganización ha permitido integrar de forma segura una tarea específica de actualización LED, sincronizada con la clasificación por eventos. También se exploró una salida de afinación en **centésimas**, pero la solución actual basada en NanoEdge opera como clasificador discreto de categorías y no proporciona una estimación continua de desviación tonal.
 
 Una parte relevante del trabajo se dedicó a estudiar la viabilidad de un enfoque alternativo de firmware en **Rust con Embassy**. Esta línea consumió aproximadamente **100 horas** y finalmente se descartó por no aportar, en este momento del proyecto, una relación coste/beneficio favorable respecto al objetivo de completar un prototipo funcional. El desarrollo total considerado en la memoria se sitúa en torno a **300 horas**.
 
-El documento describe la motivación del problema, el estado del arte, las tecnologías utilizadas, la arquitectura general, el desarrollo técnico por bloques, el plan de pruebas y la planificación del proyecto, incluyendo una estimación de costes. Finalmente, se recogen conclusiones, limitaciones actuales y posibles líneas de trabajo futuro para mejorar robustez, generalización y aplicabilidad práctica.
+El documento describe la motivación del problema, el estado del arte, las tecnologías utilizadas, la arquitectura general, el desarrollo técnico por bloques, el plan de pruebas y la planificación del proyecto, incluyendo una estimación de costes. Finalmente, se recogen conclusiones, limitaciones actuales y posibles líneas de trabajo futuro para mejorar robustez, generalización y aplicabilidad práctica, partiendo ya de una interfaz de uso autónoma basada en señalización visual en placa.
 
-Palabras clave: IA embebida, STM32, Afinador, Detección de notas, FreeRTOS
+Palabras clave: IA embebida, STM32, Afinador, Detección de notas, FreeRTOS, WS2812
 
 ---
 
@@ -53,15 +53,15 @@ The **aiBass** project proposes an embedded artificial intelligence system for m
 
 The project combines hardware instrumentation, data acquisition, signal processing, and embedded inference under resource constraints. Therefore, it lies at the intersection of embedded systems, applied machine learning, and music technology.
 
-At the current development stage, the system can detect five output classes: the four fundamental bass notes (**E, A, D, G**) and a **noise/silence** class (no valid note sounding), with results printed through a serial interface. During development, different sensor locations were tested: an initial neck-mounted setup provided low reliability, so the prototype evolved to a test setup with the sensor placed on top of the amplifier.
+At the current development stage, the system can detect five output classes: the four fundamental bass notes (**E, A, D, G**) and a **noise/silence** class (no valid note sounding). In the latest iteration, results are not only printed through a serial interface but also represented with a **WS2812 LED strip**, enabling standalone operation without a connected PC/debugger. During development, different sensor locations were tested: an initial neck-mounted setup provided low reliability, so the prototype evolved to a test setup with the sensor placed on top of the amplifier.
 
-From a software architecture perspective, the firmware now includes **FreeRTOS**, creating a cleaner foundation for adding future features. A cents-level tuning output was also explored, but the current NanoEdge-based solution is limited to **discrete signal categorization** and does not provide continuous pitch deviation estimation.
+From a software architecture perspective, the firmware now includes **FreeRTOS**, creating a cleaner foundation for adding future features. This architecture now also supports an event-driven LED task synchronized with classifier updates. A cents-level tuning output was also explored, but the current NanoEdge-based solution is limited to **discrete signal categorization** and does not provide continuous pitch deviation estimation.
 
 A significant development phase focused on assessing a firmware approach in **Rust with Embassy**. This line of work took approximately **100 hours** and was eventually dropped, as it did not provide the best cost/benefit ratio for delivering the current prototype scope. The total effort considered in this report is approximately **300 hours**.
 
 This report presents the project motivation, state of the art, employed technologies, overall architecture, technical development by modules, testing approach, and project planning, including cost estimation. Finally, conclusions, current limitations, and future work are discussed to improve robustness, generalization, and practical applicability.
 
-Keywords: Embedded AI, STM32, Tuner, Note detection, FreeRTOS
+Keywords: Embedded AI, STM32, Tuner, Note detection, FreeRTOS, WS2812
 
 ---
 
@@ -85,7 +85,7 @@ Se genera automáticamente en Google Docs/Word una vez insertadas y tituladas to
 2. Implementar una cadena completa desde captura de datos hasta inferencia embebida.
 3. Construir y gestionar un conjunto de datos representativo de las clases objetivo.
 4. Desarrollar un clasificador capaz de distinguir **E, A, D, G** y **ruido/silencio**.
-5. Integrar una salida de resultado en tiempo real mediante interfaz serie.
+5. Integrar una salida de resultado en tiempo real mediante interfaz serie y señalización visual LED.
 6. Analizar el comportamiento del sistema ante cambios de montaje y condiciones de medida.
 7. Estructurar el firmware sobre **FreeRTOS** para facilitar ampliaciones funcionales futuras.
 
@@ -103,8 +103,8 @@ La calidad del dataset condiciona de forma directa la utilidad del clasificador,
 **4) Desarrollar un clasificador capaz de distinguir E, A, D, G y ruido/silencio.**  
 Este objetivo concreta el alcance funcional del prototipo y permite medir el progreso de forma objetiva. Incluir la clase de ruido/silencio fue clave para acercar el comportamiento a una situación real de uso, donde no siempre existe una nota válida y el sistema debe ser capaz de discriminar reposo, ruido ambiental o ejecución no interpretable.
 
-**5) Integrar una salida de resultado en tiempo real mediante interfaz serie.**  
-La salida serie se planteó como interfaz mínima viable para depuración y validación del sistema durante el desarrollo. Aunque no es una interfaz final para usuario, proporciona observabilidad inmediata, permite registrar secuencias de clasificación y facilita la comparación entre versiones de firmware, cambios de montaje y ajustes de modelo.
+**5) Integrar una salida de resultado en tiempo real mediante interfaz serie y señalización visual LED.**  
+La salida serie se planteó inicialmente como interfaz mínima viable para depuración y validación del sistema durante el desarrollo. En la fase final, se añadió una interfaz visual con tira LED WS2812 sincronizada con el clasificador, de modo que el prototipo puede ofrecer feedback local sin depender de monitor serie. La combinación de ambos canales mantiene observabilidad para análisis técnico y, al mismo tiempo, mejora la usabilidad práctica del sistema en entorno de ensayo.
 
 **6) Analizar el comportamiento del sistema ante cambios de montaje y condiciones de medida.**  
 La experiencia del proyecto confirmó que el rendimiento depende tanto del modelo como del contexto físico de captura. Este objetivo obliga a tratar el sistema como un conjunto integrado hardware-software, documentando cómo afectan la fijación del sensor, la forma de ejecución y la repetibilidad entre sesiones a la estabilidad de la salida.
@@ -162,7 +162,7 @@ Desde una perspectiva social y tecnológica, iniciativas como aiBass se enmarcan
 Finalmente, esta memoria adopta una visión deliberadamente crítica de los resultados: se describen logros funcionales, pero también se documentan fronteras de validez, condiciones bajo las que el sistema pierde estabilidad y decisiones de alcance que se han tomado para priorizar consistencia técnica. Esta forma de presentación pretende facilitar una evaluación académica rigurosa y, al mismo tiempo, servir de base realista para una evolución posterior del proyecto.
 
 **Figura 1. Contexto del proyecto y flujo general de uso.**  
-Insertar un diagrama simple con el flujo: *ejecución de nota* -> *captura IMU* -> *preprocesado* -> *clasificación NanoEdge* -> *salida serie*.
+Insertar un diagrama simple con el flujo: *ejecución de nota* -> *captura IMU* -> *preprocesado* -> *clasificación NanoEdge* -> *salida serie + salida LED*.
 
 ![Figura 1.](assets/fig1.png)
 
@@ -242,7 +242,7 @@ Frente al estado del arte revisado, aiBass aporta:
 
 1. Integración de clasificación de notas fundamentales usando una cadena embebida.
 2. Validación práctica del impacto del posicionamiento del sensor.
-3. Prototipo funcional con salida en tiempo real por puerto serie.
+3. Prototipo funcional con salida en tiempo real por puerto serie y feedback visual en tira LED.
 4. Base para evolución hacia aplicaciones de afinación y/o interfaz tipo MIDI.
 5. Base software desacoplada mediante **FreeRTOS** para crecimiento funcional del sistema.
 6. Identificación explícita de la limitación actual: la clasificación discreta de NanoEdge no permite afinación en centésimas.
@@ -252,7 +252,7 @@ Frente al estado del arte revisado, aiBass aporta:
 | Afinadores por audio (pedal/app) | Audio | Nota/afinación | Alta (incluye cents) | 0-150 EUR | Muy útiles en afinación clásica, pero no exploran vía inercial |
 | Interfaces MIDI comerciales | Pastilla/audio especializado | MIDI | Discreta por evento | 150-450 EUR | Enfoque musical potente, mayor complejidad/coste |
 | Trabajos IMU musicales (literatura) | IMU wearable | Gesto/técnica | Discreta (gesto) | N/A | Validan IMU en música, no se centran en afinación |
-| **aiBass** | **IMU integrada (LSM6DSL)** | **Clase de nota por serie** | **Discreta (E/A/D/G/ruido)** | **~50 EUR hardware base** | **Prototipo embebido de bajo coste con arquitectura ampliable (FreeRTOS)** |
+| **aiBass** | **IMU integrada (LSM6DSL)** | **Clase por serie + LED local** | **Discreta (E/A/D/G/ruido)** | **~50 EUR hardware base** | **Prototipo embebido de bajo coste con arquitectura ampliable (FreeRTOS)** |
 
 Esta comparación no pretende afirmar superioridad global de aiBass frente a soluciones comerciales o académicas consolidadas. Su función es situar con precisión la contribución del proyecto: demostrar viabilidad técnica de una cadena embebida inercial para clasificación de notas fundamentales, con coste de entrada reducido y una arquitectura software preparada para crecimiento funcional.
 
@@ -298,7 +298,7 @@ Otro aspecto clave es la repetibilidad de medida. Al integrarse en la propia pla
 
 ### Firmware y herramientas de desarrollo
 
-El desarrollo firmware se ha apoyado en el ecosistema STM32 para configurar periféricos, adquirir señal inercial y publicar resultados por serie. En términos funcionales, el firmware implementa tres bloques: captura de muestras IMU, preparación de entrada para inferencia y envío de etiqueta de clase detectada.
+El desarrollo firmware se ha apoyado en el ecosistema STM32 para configurar periféricos, adquirir señal inercial y publicar resultados por interfaces locales. En términos funcionales, el firmware implementa cuatro bloques: captura de muestras IMU, preparación de entrada para inferencia, publicación de etiqueta por UART y señalización visual mediante LED direccionables.
 
 Como cambio relevante de arquitectura, se ha incorporado **FreeRTOS** para separar responsabilidades en tareas y simplificar la incorporación de nuevas funcionalidades (por ejemplo, nuevas salidas, comunicaciones o lógica de postprocesado) manteniendo una base más mantenible.
 
@@ -306,7 +306,8 @@ Herramientas y componentes de trabajo empleados:
 
 1. Entorno STM32 para configuración y compilación del proyecto embebido.
 2. Drivers/periféricos para lectura del sensor inercial y comunicación UART.
-3. Flujo de depuración iterativo con salida serie para validación del comportamiento en tiempo real.
+3. Temporizador y DMA para control de la tira WS2812 sin bloquear el flujo de clasificación.
+4. Flujo de depuración iterativo con salida serie y validación en placa de la interfaz LED en tiempo real.
 
 Además, el proyecto incorporó una fase específica de evaluación de una alternativa tecnológica basada en **Rust + Embassy** (aprox. 100 h), inicialmente descartada para el cierre del prototipo, pero considerada relevante para evolución futura.
 
@@ -329,11 +330,17 @@ Esta delimitación de alcance es importante para interpretar correctamente los r
 
 ### Interfaz de salida
 
-La interfaz actual de interacción es **serial (UART)**, orientada a depuración y validación rápida de resultados. La salida se emite en formato textual con la clase detectada en cada instante de decisión, lo que permite revisar de forma inmediata la estabilidad del sistema durante las pruebas.
+La interfaz actual de interacción combina dos canales complementarios: **serial (UART)** para trazabilidad técnica y **tira LED WS2812** para feedback local inmediato. La salida textual permite revisar con detalle la clase detectada en cada instante de decisión, mientras que la señalización LED ofrece una lectura directa del estado del clasificador sin depender de PC.
 
-Este enfoque simplifica el ciclo de experimentación: facilita observar errores de clasificación, comparar comportamientos entre montajes físicos y ajustar el pipeline sin necesidad de una interfaz gráfica compleja.
+Este enfoque dual simplifica el ciclo de experimentación y también mejora la experiencia de uso del prototipo en escenarios reales de prueba. Durante sesiones de ejecución, el usuario puede interpretar rápidamente el resultado por color, y en paralelo conservar registros serie para análisis posterior cuando sea necesario depurar comportamiento.
 
-Adicionalmente, la salida textual por serie habilita la creación de registros de ejecución para análisis posterior, algo especialmente útil cuando se comparan cambios de configuración entre sesiones. Aunque en una versión de producto final la interfaz debería evolucionar, en la fase de TFG esta elección aporta una relación coste-beneficio muy favorable para depuración y validación.
+Adicionalmente, el diseño actual evita tratar la interfaz visual como un añadido bloqueante: la actualización LED está desacoplada por tarea y activada por eventos de clasificación, de forma coherente con la arquitectura FreeRTOS del sistema.
+
+### Interfaz visual WS2812 y actualización por eventos
+
+La integración de la tira LED se realizó adaptando la librería WS2812 para uso seguro en entorno multitarea. En concreto, se eliminó la espera activa de fin de DMA y se sustituyó por sincronización mediante primitivas RTOS (mutex y semáforo), incorporando además tiempo de espera máximo para evitar bloqueos indefinidos. Esta decisión es coherente con buenas prácticas de uso de LEDs direccionables y con la filosofía de desacoplamiento del kernel FreeRTOS (Adafruit Industries, s. f.; FreeRTOS Community, s. f.).
+
+Desde el punto de vista funcional, la lógica de visualización trabaja con eventos de clasificación: cuando se identifica ruido/silencio, la tira indica estado de no nota válida; cuando se identifica una nota válida, muestra estado activo y realza la nota detectada con un patrón de color dedicado. Esta estrategia permite mantener latencia baja en inferencia y, al mismo tiempo, presentar una salida visual estable y útil para el usuario final.
 
 ### Tecnologías auxiliares
 
@@ -362,13 +369,14 @@ La arquitectura funcional de aiBass puede representarse como una tubería de pro
 3. Inferencia del modelo de clasificación.
 4. Postprocesado de la decisión.
 5. Publicación del resultado por serie.
+6. Actualización de interfaz visual LED por evento de clasificación.
 
 La orquestación de estos bloques se apoya en **FreeRTOS**, permitiendo desacoplar adquisición, inferencia y comunicación para facilitar evolución futura del sistema.
 
 Esta visión por bloques ayuda a separar decisiones de distinta naturaleza: decisiones de señal (qué se captura y cómo se preprocesa), decisiones de inferencia (cómo se clasifica) y decisiones de sistema (cómo se coordina y publica resultado). En términos de mantenibilidad, esta separación reduce el impacto de cambios locales y simplifica la incorporación de nuevas salidas o estrategias de postprocesado.
 
 **Figura 4. Diagrama de bloques de la arquitectura funcional.**  
-Insertar diagrama a página completa con los bloques A/B/C/D y las tareas FreeRTOS asociadas.
+Insertar diagrama a página completa con los bloques A/B/C/D y las tareas FreeRTOS asociadas, incluyendo la ruta de señalización LED (flag de actualización -> tarea LED -> WS2812).
 
 ### Bloques principales
 
@@ -382,7 +390,7 @@ Normaliza/estructura los datos para formar la entrada de inferencia.
 Genera la etiqueta de clase entre {E, A, D, G, ruido}.
 
 #### Bloque D — Salida y monitorización
-Emite la clase detectada por puerto serie y facilita la depuración.
+Emite la clase detectada por puerto serie y actualiza estado visual en tira LED.
 
 ### Relación tecnología-bloque
 
@@ -391,7 +399,7 @@ Emite la clase detectada por puerto serie y facilita la depuración.
 | A | LSM6DSL + STM32L4S5VI | Adquisición de señal |
 | B | Firmware + FreeRTOS | Preparación de entrada y planificación por tareas |
 | C | Modelo IA NanoEdge (clasificación multiclase) | Clasificación discreta por categorías |
-| D | UART/Serial | Diagnóstico y salida |
+| D | UART + WS2812 (TIM2/DMA) | Diagnóstico, feedback visual local y salida autónoma |
 
 Desde una perspectiva de evolución, esta distribución tecnológica permite planificar mejoras de forma incremental. Por ejemplo, cambios de interfaz de usuario afectarían principalmente al Bloque D, mientras que mejoras de robustez de clasificación podrían centrarse en Bloques B y C sin necesidad de modificar profundamente la captura hardware del Bloque A. Esta modularidad es una de las razones por las que se priorizó una estructura basada en tareas.
 
@@ -411,7 +419,7 @@ Este enfoque iterativo fue esencial para controlar el riesgo técnico. En un pro
 
 ### Gestión de ramas de trabajo y transición funcional
 
-Durante el desarrollo se mantuvieron dos líneas de evolución de firmware con objetivos diferentes: una rama inicial orientada a **DataLogger** (captura y registro de datos, sin FreeRTOS) y la rama actual orientada a **clasificador embebido** con arquitectura por tareas. Esta separación práctica ayudó a no bloquear el avance global del proyecto cuando una línea concreta requería más experimentación.
+Durante el desarrollo se mantuvieron dos líneas de evolución de firmware con objetivos diferentes: una rama inicial orientada a **DataLogger** (captura y registro de datos, sin FreeRTOS) y la rama actual orientada a **clasificador embebido** con arquitectura por tareas. En la fase final de esta última rama se añadió también la interfaz visual con tira LED, cerrando el circuito de uso autónomo del prototipo. Esta separación práctica ayudó a no bloquear el avance global del proyecto cuando una línea concreta requería más experimentación.
 
 La rama de DataLogger resultó especialmente útil en fases tempranas para comprobar calidad de señal y consistencia de etiquetado. La rama de clasificador, por su parte, concentró la integración de inferencia y salida en tiempo real, incorporando progresivamente mejoras de concurrencia y robustez de comunicación. Mantener ambas líneas redujo regresiones y facilitó comparar comportamientos al trasladar cambios entre versiones.
 
@@ -492,11 +500,11 @@ La validación del modelo se interpretó en clave de prototipo funcional y no co
 
 ### Integración embebida
 
-En esta fase se integra el modelo en la plataforma STM32L4S5VI y se enlaza con el pipeline de captura y salida serie.
+En esta fase se integra el modelo en la plataforma STM32L4S5VI y se enlaza con el pipeline de captura y salidas de usuario (serie + LED).
 
 La integración se realiza sobre una estructura con **FreeRTOS**, separando en tareas la adquisición IMU, la inferencia y la publicación de resultados para mejorar claridad de diseño y preparar el sistema para futuras ampliaciones.
 
-En `freertos.c`, la coordinación entre tareas se resuelve con mutex y flags de hilo. El flujo principal es: adquirir ventana -> señalizar clasificación -> ejecutar inferencia.
+En `freertos.c`, la coordinación entre tareas se resuelve con mutex y flags de hilo. El flujo principal es: adquirir ventana -> señalizar clasificación -> ejecutar inferencia -> señalizar actualización visual.
 
 ```c
 for (;;) {
@@ -526,6 +534,19 @@ if (windowMutexHandle != NULL) {
 }
 ```
 
+En la versión actual se usan tres tareas principales explícitas (`t_acquire_window`, `t_neai_classify` y `t_ledtask`) y dos flags de sincronización (`WINDOW_READY_FLAG` y `LED_UPDATE_FLAG`). Además, durante la creación de tareas se valida que cada *task handle* sea correcto; en caso contrario, el sistema deriva a `Error_Handler()`, evitando ejecutar un pipeline parcial en estado inconsistente.
+
+```c
+osThreadFlagsWait(LED_UPDATE_FLAG, osFlagsWaitAny, osWaitForever);
+if (class_name[0] == 'N') {
+    // ruido/silencio: estado de no nota válida
+    set_strip_red();
+} else {
+    // nota válida: estado activo + acento de nota
+    set_strip_green_with_note_accent();
+}
+```
+
 En la configuración de prototipo, la huella del firmware se mantuvo dentro del margen de la plataforma: uso aproximado de Flash en torno a 300 KB y RAM de trabajo por debajo de 170 KB (incluyendo buffers de ventana y comunicación). La latencia media de inferencia quedó en un rango compatible con monitorización en tiempo real, aplicando optimizaciones simples de buffer reutilizable y reducción de copias intermedias.
 
 Respecto al driver IMU, se partió de la librería docente (`LSM6DSL.c`) y se adaptó para un uso más robusto en entorno multitarea, añadiendo comprobación explícita de *data ready* y espera acotada por timeout:
@@ -546,7 +567,11 @@ HAL_StatusTypeDef LSM6DSL_WaitDataReady(uint32_t timeout_ms) {
 }
 ```
 
-### Lógica de clasificación y salida serie
+En paralelo, la librería WS2812 también se adaptó para uso RTOS: se eliminó la espera activa al finalizar DMA, se introdujo sincronización por semáforo/mutex, se añadió timeout de protección para evitar bloqueos indefinidos y se limitó la liberación de sincronía al temporizador esperado (`TIM2`) dentro del callback de fin de pulso PWM.
+
+Este cambio fue importante porque evitó que la interfaz visual degradara la estabilidad temporal del clasificador. En lugar de competir por CPU con bucles de espera, la salida LED quedó desacoplada por eventos, manteniendo el comportamiento del sistema predecible incluso durante secuencias de actualización frecuentes.
+
+### Lógica de clasificación y salidas (serie + LED)
 
 El sistema actual genera etiquetas de clase para:
 
@@ -556,7 +581,17 @@ El sistema actual genera etiquetas de clase para:
 - **G**
 - **ruido/silencio**
 
-El resultado se muestra por puerto serie para validación y seguimiento de comportamiento en tiempo real.
+El resultado se publica por dos canales complementarios:
+
+1. Puerto serie, para validación fina y trazabilidad técnica.
+2. Tira LED, para feedback local inmediato sin PC.
+
+Comportamiento visual implementado:
+
+- Si la clase detectada es **noise/silence** (`class_name[0] == 'N'`): la tira completa se muestra en rojo.
+- Si la clase detectada es una **nota válida**: la tira se muestra en verde y se aplica un acento de color por nota en LEDs específicos para facilitar identificación rápida.
+
+Con esta implementación, la interfaz funcional puede considerarse cerrada para objetivo de prototipo: el sistema ofrece respuesta útil en campo sin depender de consola de depuración.
 
 Para evitar conflictos de transmisión entre tareas, la salida serie se protege con mutex en `main.c` mediante la sobrecarga de `__io_putchar`:
 
@@ -578,6 +613,9 @@ Esta limitación se documentó como decisión de alcance y no como fallo de impl
 **Figura 7. Salida serie del sistema durante una sesión de prueba.**  
 Insertar captura de terminal con secuencias de etiquetas E/A/D/G/ruido y marcas de tiempo.
 
+**Figura 8. Señalización LED por clase detectada.**  
+Insertar fotografía de la tira LED mostrando al menos dos estados: ruido/silencio y nota válida.
+
 ### Problemas encontrados y soluciones aplicadas
 
 | Problema | Impacto | Solución aplicada | Resultado |
@@ -585,6 +623,8 @@ Insertar captura de terminal con secuencias de etiquetas E/A/D/G/ruido y marcas 
 | Inestabilidad de señal con IMU en mástil | Confusiones frecuentes entre clases y baja repetibilidad | Cambio de montaje al amplificador + reajuste de protocolo de captura | Mejora clara de consistencia temporal en pruebas repetidas |
 | Desequilibrio inicial de muestras por clase | Sesgo del modelo hacia clases más representadas | Rebalanceo parcial de dataset y revisión de etiquetado | Incremento de F1 macro y reducción de falsos positivos |
 | Integración de nuevas funcionalidades en firmware monolítico | Mantenimiento complejo y crecimiento difícil | Reorganización por tareas con FreeRTOS | Base más modular para ampliaciones futuras |
+| Dependencia de PC para visualizar resultado | Uso poco práctico fuera de entorno de depuración | Integración de tira LED WS2812 con actualización por eventos | Interfaz autónoma en placa para uso inmediato |
+| Riesgo de bloqueo en actualización LED por espera activa DMA | Pérdida de respuesta temporal y posibilidad de cuelgue | Adaptación de librería WS2812 con semáforo/mutex + timeout | Flujo visual no bloqueante y más robusto en RTOS |
 | Intento de afinación en centésimas | No se podía expresar desviación tonal continua | Delimitar alcance a clasificación discreta y dejar cents como línea futura | Objetivo de prototipo mantenido sin sobrecargar arquitectura |
 
 ### Alternativas desechadas
@@ -620,6 +660,7 @@ Verificar el comportamiento del sistema en términos de:
 2. Estabilidad temporal de la salida.
 3. Robustez ante variaciones de ejecución.
 4. Estabilidad de la arquitectura por tareas con FreeRTOS bajo carga nominal del prototipo.
+5. Coherencia entre clase detectada y señalización visual en tira LED.
 
 El plan de pruebas se diseñó para responder a preguntas de ingeniería concretas: si el sistema distingue clases de forma consistente, en qué escenarios se degrada, y qué parte de esa degradación se asocia a señal de entrada frente a limitaciones del clasificador. Esta orientación permitió utilizar las pruebas no solo como validación final, sino como guía de iteración durante el desarrollo.
 
@@ -632,8 +673,17 @@ El plan de pruebas se diseñó para responder a preguntas de ingeniería concret
 | PF-03 | Cuerda asociada a D | Señal clase D | Etiqueta D | Superado con variación moderada entre sesiones |
 | PF-04 | Cuerda asociada a G | Señal clase G | Etiqueta G | Superado; sensible a cambios bruscos de dinámica |
 | PF-05 | Sin nota válida | Ruido/silencio | Etiqueta ruido | Superado; algunos falsos positivos aislados |
+| PF-06 | Ruido/silencio en reposo | Clase N | Tira LED en rojo | Superado en ejecución continua |
+| PF-07 | Nota válida mantenida | Clase E/A/D/G | Tira LED en verde + acento de nota | Superado en entorno controlado |
+| PF-08 | Cambio rápido entre clases | Secuencia de clases válidas/ruido | Actualización LED sin bloqueo del clasificador | Superado con oscilaciones puntuales en transitorios |
 
 La matriz funcional no debe entenderse como una validación estadística exhaustiva, sino como una evidencia estructurada del comportamiento esperado por clase en entorno controlado. Su valor principal es aportar trazabilidad entre escenario probado, salida esperada y resultado observado, algo imprescindible para justificar decisiones de ajuste posteriores.
+
+### Pruebas específicas de interfaz visual
+
+Además de comprobar la clasificación, se verificó que la tira LED reaccionara únicamente a eventos nuevos y no mediante refresco periódico ciego. Esta diferencia es importante porque evita carga innecesaria y reduce el riesgo de introducir latencia artificial sobre tareas críticas de adquisición e inferencia.
+
+También se comprobó el comportamiento de degradación: ante estados de ruido/silencio prolongados, el sistema mantiene una indicación estable y comprensible (rojo), mientras que al recuperar nota válida vuelve a estado activo sin reinicios ni necesidad de intervención externa. Este patrón refuerza el objetivo de uso autónomo del prototipo.
 
 ### Pruebas de robustez
 
@@ -643,7 +693,7 @@ Estas pruebas fueron especialmente útiles para delimitar el dominio operativo d
 
 ### Discusión de resultados
 
-Los resultados son consistentes con una fase de prototipo: el sistema ya discrimina clases útiles en condiciones controladas y permite validar decisiones de arquitectura (captura, preprocesado, tareas FreeRTOS e inferencia). La principal debilidad aparece cuando baja la energía de señal o aumenta la variabilidad de ejecución, donde crecen las confusiones y falsos positivos.
+Los resultados son consistentes con una fase de prototipo: el sistema ya discrimina clases útiles en condiciones controladas y permite validar decisiones de arquitectura (captura, preprocesado, tareas FreeRTOS, inferencia y salida visual desacoplada). La principal debilidad aparece cuando baja la energía de señal o aumenta la variabilidad de ejecución, donde crecen las confusiones y falsos positivos.
 
 En términos de alcance, el sistema cumple su objetivo de clasificación discreta en tiempo real, pero no debe interpretarse aún como afinador de precisión fina. La ausencia de estimación continua de desviación tonal (centésimas) es una limitación estructural del enfoque actual con NanoEdge y marca una frontera clara entre este prototipo y un afinador avanzado comercial.
 
@@ -655,7 +705,7 @@ En las sesiones de prueba se observó que la transición entre estados estables 
 
 Este comportamiento sugiere que una parte relevante de la mejora futura no pasa exclusivamente por cambiar de algoritmo, sino por refinar la representación temporal de entrada. Estrategias como ventanas con solapamiento adaptativo, filtrado de transitorios espurios o reglas de postprocesado temporal podrían reducir oscilaciones de clase sin comprometer la latencia de respuesta.
 
-Desde la perspectiva de experiencia de usuario, el sistema actual ya ofrece utilidad en sesiones de validación y práctica técnica controlada, especialmente al proporcionar una lectura rápida de clase detectada. No obstante, para un uso más exigente sería recomendable incorporar indicadores de confianza y mecanismos de suavizado temporal que hagan la salida más interpretable en situaciones dinámicas.
+Desde la perspectiva de experiencia de usuario, el sistema actual ya ofrece utilidad en sesiones de validación y práctica técnica controlada, especialmente al proporcionar una lectura rápida de clase detectada tanto por UART como por LED. No obstante, para un uso más exigente sería recomendable incorporar indicadores de confianza y mecanismos de suavizado temporal que hagan la salida más interpretable en situaciones dinámicas.
 
 En resumen, los resultados de pruebas apoyan la viabilidad del enfoque en su alcance actual y aportan una hoja de ruta clara de mejora: robustecer la fase de entrada y estabilizar la capa de salida antes de ampliar resolución musical o integrar funcionalidades más avanzadas.
 
@@ -672,7 +722,7 @@ Dedicación total estimada del proyecto (desarrollo): **~300 horas**.
 | H1 | Investigación de viabilidad con Rust + Embassy (descartada) | **100** | **33.3%** | 0-100 |
 | H2 | Adquisición y organización de datos | 58 | 19.3% | 100-158 |
 | H3 | Entrenamiento y ajuste del modelo IA | 52 | 17.3% | 158-210 |
-| H4 | Integración embebida + salida serie | 42 | 14.0% | 210-252 |
+| H4 | Integración embebida + salidas de usuario (serie + LED) | 42 | 14.0% | 210-252 |
 | H5 | Pruebas, depuración y ajustes finales | 28 | 9.3% | 252-280 |
 | H6 | Redacción técnica de memoria y documentación | 20 | 6.7% | 280-300 |
 | **TOTAL** |  | **300** | **100%** | 0-300 |
@@ -690,7 +740,7 @@ La fase de mayor peso temporal fue **H1 (100 h, 33.3%)**, dedicada a investigar 
 
 El segundo bloque en tiempo fue la preparación de datos (**H2, 58 h**), seguido del entrenamiento del modelo (**H3, 52 h**). Esto es coherente con un proyecto de IA embebida, donde la calidad del dato y la iteración del modelo condicionan fuertemente el resultado final.
 
-La integración en firmware y salida serie (**H4, 42 h**) supuso menos carga que las fases exploratorias iniciales, al apoyarse en una arquitectura ya definida. Las últimas fases (**H5-H6**) consumieron menos horas al centrarse en consolidación, validación y redacción, con menor incertidumbre técnica que en etapas anteriores.
+La integración en firmware y salidas de usuario (**H4, 42 h**) supuso menos carga que las fases exploratorias iniciales, al apoyarse en una arquitectura ya definida. Las últimas fases (**H5-H6**) consumieron menos horas al centrarse en consolidación, validación y redacción, con menor incertidumbre técnica que en etapas anteriores.
 
 Desde el punto de vista de gestión de riesgos temporales, el principal aprendizaje fue que anticipar una fase de investigación temprana permitió absorber incertidumbre sin comprometer el cierre funcional. Aunque esa fase derivó en una alternativa descartada, redujo el riesgo de cambios tardíos de arquitectura y aportó criterios sólidos para priorizar tareas en la segunda mitad del proyecto.
 
@@ -724,6 +774,8 @@ Esta sección pretende estimar el esfuerzo económico del proyecto distinguiendo
 | **TOTAL MATERIAL** |  |  | **60.00 €** |
 
 Aunque el coste material directo es reducido, su relevancia en este TFG es estratégica: disponer de una plataforma integrada con sensórica y depuración embebida permitió acortar tiempos de iteración, lo que impacta más en el resultado final que un posible ahorro marginal en hardware alternativo de menor soporte.
+
+En la implementación final se añadió además una tira LED direccionable para interfaz visual autónoma. Al haberse integrado en fase de prototipado como ampliación funcional de última hora, su impacto económico se considera menor frente al coste global de desarrollo; no obstante, para una versión de producto conviene modelar explícitamente su coste unitario junto con conectores, protección eléctrica y encapsulado asociado.
 
 ### Coste de personal
 
@@ -769,6 +821,8 @@ Estimación para una tirada de **1,500 unidades**, aplicando un descuento de mat
 
 La estimación en serie debe interpretarse únicamente como ejercicio preliminar de viabilidad y no como presupuesto industrial cerrado. Para una transición real a producto serían necesarios costes adicionales no modelados en detalle en esta memoria (industrialización electrónica, certificaciones, logística, soporte y posventa), que exceden el alcance de un prototipo académico.
 
+En ese escenario industrial también debería contemplarse la estrategia de interfaz visual: número de LEDs, brillo objetivo, consumo máximo y requisitos térmicos del encapsulado final. Estas decisiones afectan tanto al presupuesto electrónico como a la experiencia de uso y autonomía del sistema en campo.
+
 ---
 
 ## Conclusiones
@@ -780,10 +834,10 @@ La estimación en serie debe interpretarse únicamente como ejercicio preliminar
 | Estudiar posicionamiento del sensor e interfaz FW/SW | Completado | Pruebas en mástil y transición a prueba en amplificador |
 | Construir dataset de muestras | Completado (versión inicial) | Dataset etiquetado para E, A, D, G y ruido/silencio |
 | Diseñar y entrenar IA embebida | Completado (iterativo) | Tres iteraciones de modelo y selección de versión final por equilibrio robustez/latencia |
-| Implementar interfaz de usuario/representación | Parcial | Salida serie de clase detectada (a falta de pantalla LCD o alternativa) |
+| Implementar interfaz de usuario/representación | Completado (nivel prototipo) | Salida serie + señalización visual con tira LED WS2812 sin dependencia de PC |
 | Evaluar desempeño de la IA | Completado (nivel prototipo) | Exactitud global en entorno controlado y pruebas de robustez con variaciones de ejecución |
 
-El proyecto aiBass ha permitido construir una base funcional para detección de notas en bajo mediante sensórica inercial e inferencia embebida. En su estado actual, se ha logrado la clasificación de cinco clases de interés (E, A, D, G y ruido/silencio), junto con la visualización de resultados en serie para validación operativa.
+El proyecto aiBass ha permitido construir una base funcional para detección de notas en bajo mediante sensórica inercial e inferencia embebida. En su estado actual, se ha logrado la clasificación de cinco clases de interés (E, A, D, G y ruido/silencio), junto con la visualización de resultados por doble canal: salida serie para trazabilidad y señalización LED para uso autónomo.
 
 Además, la incorporación de **FreeRTOS** deja preparada una arquitectura más modular para futuras extensiones del sistema. Como limitación principal de funcionalidad musical fina, la versión actual no ofrece afinación por centésimas, ya que el enfoque de NanoEdge utilizado clasifica señales en categorías discretas.
 
@@ -791,7 +845,7 @@ Desde el punto de vista de ingeniería, uno de los aprendizajes clave ha sido la
 
 A nivel personal y formativo, el proyecto ha reforzado competencias de diseño experimental, depuración en sistemas embebidos y toma de decisiones bajo restricciones reales de tiempo. La principal dificultad fue equilibrar ambición técnica con cierre funcional del TFG, especialmente al decidir qué líneas mantener y cuáles posponer. La valoración global es positiva: se ha establecido una base funcional reproducible, técnicamente defendible y con margen claro de evolución en futuras iteraciones.
 
-En términos de contribución académica, aiBass demuestra que es posible construir un prototipo de clasificación musical embebida con recursos moderados y una arquitectura escalable. Aunque el resultado actual no cubre todos los escenarios de uso de un producto final, sí ofrece una base sólida para continuar con mejoras de resolución tonal, robustez y experiencia de usuario sin partir de cero.
+En términos de contribución académica, aiBass demuestra que es posible construir un prototipo de clasificación musical embebida con recursos moderados y una arquitectura escalable. Aunque el resultado actual no cubre todos los escenarios de uso de un producto final, sí ofrece una base sólida para continuar con mejoras de resolución tonal, robustez y experiencia de usuario sin partir de cero. La incorporación de la tira LED en la fase final refuerza además el valor aplicado del prototipo, al acercarlo a un uso real fuera de laboratorio.
 
 Como cierre, el proyecto deja una doble aportación: un resultado funcional tangible y un marco de trabajo técnico para iteraciones futuras. Esta combinación entre implementación y aprendizaje estructurado es especialmente valiosa en un TFG, donde no solo importa el artefacto final sino también la calidad del proceso de ingeniería que lo sustenta.
 
@@ -817,7 +871,7 @@ La evolución del proyecto ha mostrado que el punto de montaje impacta fuertemen
 
 ### Evolución de la interfaz de usuario
 
-La salida serie actual es suficiente para depuración, pero limitada para uso final. Una línea de mejora sería desarrollar una interfaz de mayor nivel (aplicación de escritorio o móvil) que muestre historial de detecciones, métricas de confianza y herramientas de apoyo al aprendizaje o afinación.
+La interfaz actual ya dispone de salida serie y señalización LED local, lo que cubre el uso básico sin PC. Como evolución natural, una línea de mejora sería desarrollar una interfaz de mayor nivel (aplicación de escritorio o móvil) que muestre historial de detecciones, métricas de confianza, ajuste de perfiles de color y herramientas de apoyo al aprendizaje o afinación.
 
 ### Integración musical avanzada (MIDI/DAW)
 
@@ -863,9 +917,13 @@ Freire, S., Santos, G., Armondes, A., Meneses, E. A. L., & Wanderley, M. M. (202
 
 Dalmazzo, D., & Ramírez, R. (2019). *Bowing gestures classification in violin performance: A machine learning approach*. *Frontiers in Psychology, 10*, Article 344. https://doi.org/10.3389/fpsyg.2019.00344
 
+Adafruit Industries. (s. f.). *Adafruit NeoPixel Überguide*. Recuperado el 18 de mayo de 2026, de https://learn.adafruit.com/adafruit-neopixel-uberguide
+
 Fender Musical Instruments Corporation. (s. f.). *Fender Tune app*. Recuperado el 12 de mayo de 2026, de https://www.fender.com/pages/tune-app
 
 Fishman Transducers, Inc. (s. f.). *TriplePlay Connect MIDI guitar controller*. Recuperado el 12 de mayo de 2026, de https://www.fishman.com/portfolio/tripleplay-connect-midi-guitar-controller/
+
+FreeRTOS Community. (s. f.). *FreeRTOS-Kernel* [Repositorio de software]. GitHub. Recuperado el 18 de mayo de 2026, de https://github.com/FreeRTOS/FreeRTOS-Kernel
 
 Provenzale, C., Di Stefano, N., Noccaro, A., & Taffoni, F. (2021). *Assessing the bowing technique in violin beginners using MIMU and optical proximity sensors: A feasibility study*. *Sensors, 21*(17), Article 5817. https://doi.org/10.3390/s21175817
 
@@ -905,15 +963,16 @@ TC Electronic. (s. f.). *PolyTune 3 Polyphonic Tuner*. Recuperado el 12 de mayo 
 1. Conectar la placa B-L4S5I-IOT01A por USB al ordenador.
 2. Cargar el firmware del proyecto desde el entorno de desarrollo.
 3. Abrir un monitor serie (115200 baudios, 8N1).
-4. Verificar que aparecen etiquetas de salida en reposo (normalmente `NOISE`).
-5. Ejecutar notas de bajo y observar la secuencia de clases detectadas.
-6. Registrar capturas de terminal para análisis posterior en el apartado de pruebas.
+4. Verificar que aparecen etiquetas de salida en reposo (normalmente `NOISE`) y estado LED de ruido/silencio.
+5. Ejecutar notas de bajo y observar la secuencia de clases detectadas junto con el cambio de color en la tira LED.
+6. Comprobar que el sistema sigue mostrando resultado útil aunque no se consulte la consola serie.
+7. Registrar capturas/fotografías de ambos canales de salida para análisis posterior en el apartado de pruebas.
 
 ### Anexo C — Manual de instalación/compilación
 
 1. Instalar **STM32CubeIDE** con soporte para la familia STM32L4+.
 2. Importar el proyecto de firmware aiBass en el workspace.
-3. Revisar configuración de reloj/periféricos (IMU y UART) y tareas FreeRTOS.
+3. Revisar configuración de reloj/periféricos (IMU, UART, TIM2/DMA para WS2812) y tareas FreeRTOS.
 4. Compilar en modo *Debug* o *Release* según la sesión de prueba.
 5. Flashear la placa mediante ST-LINK integrado.
 6. Reiniciar la placa y validar salida serie para confirmar despliegue correcto.
@@ -928,3 +987,4 @@ Incluir en este anexo:
 4. Tabla extendida de métricas por iteración de modelo.
 5. Fotografías del montaje físico usado en las pruebas.
 6. [Report NanoEdge AI Studio](assets/neai_report.pdf)
+7. Evidencias visuales de estados LED por clase detectada.
