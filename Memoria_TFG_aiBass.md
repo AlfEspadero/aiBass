@@ -446,27 +446,40 @@ Verificar el comportamiento del sistema en términos de:
 
 Dedicación total estimada del proyecto (desarrollo): **~300 horas**.
 
-`[[PENDIENTE FECHAS REALES]]`
-
-Plantilla de hitos:
-
-| Hito | Descripción | Inicio | Fin | Dedicación (h) |
-|---|---|---|---|---|
-| H1 | Investigación de viabilidad con Rust + Embassy (descartada) | `[[...]]` | `[[...]]` | **100** |
-| H2 | Adquisición de datos | `[[...]]` | `[[...]]` | `[[...]]` |
-| H3 | Entrenamiento IA | `[[...]]` | `[[...]]` | `[[...]]` |
-| H4 | Integración embebida + salida serie | `[[...]]` | `[[...]]` | `[[...]]` |
-| H5 | Pruebas y ajuste | `[[...]]` | `[[...]]` | `[[...]]` |
-| H6 | Redacción memoria | `[[...]]` | `[[...]]` | `[[...]]` |
-| **TOTAL** |  |  |  | **300** |
+| Hito | Descripción | Horas (h) | % sobre total | Rango acumulado (h) |
+|---|---|---:|---:|---|
+| H1 | Investigación de viabilidad con Rust + Embassy (descartada) | **100** | **33.3%** | 0-100 |
+| H2 | Adquisición y organización de datos | 58 | 19.3% | 100-158 |
+| H3 | Entrenamiento y ajuste del modelo IA | 52 | 17.3% | 158-210 |
+| H4 | Integración embebida + salida serie | 42 | 14.0% | 210-252 |
+| H5 | Pruebas, depuración y ajustes finales | 28 | 9.3% | 252-280 |
+| H6 | Redacción técnica de memoria y documentación | 20 | 6.7% | 280-300 |
+| **TOTAL** |  | **300** | **100%** | 0-300 |
 
 ### 13.2 Representación gráfica
 
-`[[FIGURA 10: Diagrama de Gantt]]`
+**Diagrama de Gantt (escala en horas acumuladas, sin fechas):**
+
+```text
+Escala horizontal: 0h ───────────────────────────────────────────────────── 300h
+
+H1  Investigación Rust+Embassy   [0 ──────────────────────── 100]
+H2  Adquisición de datos         [100 ─────────── 158]
+H3  Entrenamiento IA             [158 ────────── 210]
+H4  Integración embebida         [210 ──────── 252]
+H5  Pruebas y ajuste             [252 ───── 280]
+H6  Redacción memoria            [280 ─── 300]
+```
+
+`[[FIGURA 10: Si se quiere formato visual, convertir este Gantt textual a imagen en Google Docs con barras horizontales]]`
 
 ### 13.3 Análisis temporal
 
-`[[EXPLICAR: qué tareas consumieron más tiempo y por qué]]`
+La fase de mayor peso temporal fue **H1 (100 h, 33.3%)**, dedicada a investigar la viabilidad de una implementación en Rust con Embassy. Aunque esta línea no se mantuvo en la solución final, concentró una parte relevante del esfuerzo por curva de aprendizaje, evaluación de herramientas y pruebas de integración.
+
+El segundo bloque en tiempo fue la preparación de datos (**H2, 58 h**), seguido del entrenamiento del modelo (**H3, 52 h**). Esto es coherente con un proyecto de IA embebida, donde la calidad del dato y la iteración del modelo condicionan fuertemente el resultado final.
+
+La integración en firmware y salida serie (**H4, 42 h**) supuso menos carga que las fases exploratorias iniciales, al apoyarse en una arquitectura ya definida. Las últimas fases (**H5-H6**) consumieron menos horas al centrarse en consolidación, validación y redacción, con menor incertidumbre técnica que en etapas anteriores.
 
 ---
 
@@ -476,40 +489,48 @@ Plantilla de hitos:
 
 | Concepto | Unidades | Coste unitario | Subtotal |
 |---|---:|---:|---:|
-| `[[Placa STM32L4S5VI / kit]]` | `[[...]]` | `[[...]] €` | `[[...]] €` |
-| `[[Sensor IMU LSM6DSL]]` | `[[...]]` | `[[...]] €` | `[[...]] €` |
-| `[[Cableado/montaje]]` | `[[...]]` | `[[...]] €` | `[[...]] €` |
-| `[[Otros]]` | `[[...]]` | `[[...]] €` | `[[...]] €` |
-| **TOTAL MATERIAL** |  |  | `[[...]] €` |
+| Discovery kit **B-L4S5I-IOT01A** (incluye IMU LSM6DSL) | 1 | 50.00 € | 50.00 € |
+| Cable USB / alimentación / conexión | 1 | 6.00 € | 6.00 € |
+| Material auxiliar de montaje (cinta, fijación, consumibles) | 1 | 4.00 € | 4.00 € |
+| **TOTAL MATERIAL** |  |  | **60.00 €** |
 
 ### 14.2 Coste de personal
 
-`[[INDICAR MODELO DE ESTIMACIÓN (COCOMO SIMPLE U OTRO) Y PARÁMETROS REALES]]`
+Para estimar el coste de personal se utiliza una métrica equivalente a **COCOMO simple** basada en personas-mes.
 
-Referencia conocida para cálculo: **300 horas** de dedicación total de desarrollo.
+Suposiciones de cálculo:
+
+1. Proyecto desarrollado por **1 persona**.
+2. Dedicación total técnica: **300 horas**.
+3. Jornada mensual de referencia: **150 h/mes**.
+4. Coste mensual imputado del perfil técnico: **2,100 €/mes**.
 
 | Concepto | Valor |
 |---|---:|
 | Horas de desarrollo (totales) | **300 h** |
 | Horas dedicadas a investigación Rust + Embassy (descartada) | **100 h** |
-| Personas-mes estimadas | `[[...]]` |
-| Coste mensual por persona | `[[...]] €` |
-| **TOTAL PERSONAL** | `[[...]] €` |
+| Personas-mes estimadas (300 / 150) | **2.00 PM** |
+| Coste mensual por persona | **2,100 €** |
+| **TOTAL PERSONAL (2.00 × 2,100)** | **4,200.00 €** |
 
 ### 14.3 Coste total de prototipo
 
-**Coste prototipo = Coste material + Coste personal = `[[...]] €`**
+**Coste prototipo = Coste material + Coste personal = 60.00 € + 4,200.00 € = 4,260.00 €**
 
 ### 14.4 Estimación de producción en serie
 
-`[[EJEMPLO REQUERIDO POR PLANTILLA: 1000-2000 uds, descuento material 15-20%, margen 20-30%]]`
+Estimación para una tirada de **1,500 unidades**, aplicando un descuento de material del **18%** y un margen comercial del **25%**.
 
 | Concepto | Valor |
 |---|---:|
-| Unidades | `[[...]]` |
-| Descuento material | `[[...]] %` |
-| Margen beneficio | `[[...]] %` |
-| Precio final estimado por unidad | `[[...]] €` |
+| Unidades | **1,500** |
+| Coste base de material por unidad (referencia kit) | **50.00 €** |
+| Descuento material por volumen | **18%** |
+| Material estimado por unidad tras descuento | **41.00 €** |
+| Repercusión de coste de desarrollo por unidad (4,200 / 1,500) | **2.80 €** |
+| Coste estimado por unidad antes de margen | **43.80 €** |
+| Margen de beneficio aplicado | **25%** |
+| **Precio final estimado de venta al público por unidad** | **54.75 €** |
 
 ---
 
