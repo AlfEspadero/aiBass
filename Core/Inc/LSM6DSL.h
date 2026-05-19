@@ -8,6 +8,9 @@
 #ifndef INC_LSM6DSL_H_
 #define INC_LSM6DSL_H_
 
+#include <stdint.h>
+#include "stm32l4xx_hal.h"
+
 #define LSM6DSL_ADDR 0xD4
 
 
@@ -25,10 +28,12 @@
 #define ODR_XL_6660Hz 0xA0
 
 
-void LSM6DSL_Init();
+HAL_StatusTypeDef LSM6DSL_Init(void);
 
-uint8_t LSM6DSL_DataReady();
+HAL_StatusTypeDef LSM6DSL_DataReady(uint8_t *ready);
 
-void LSM6DSL_ReadAccel(float accel[]);
+HAL_StatusTypeDef LSM6DSL_WaitDataReady(uint32_t timeout_ms);
+
+HAL_StatusTypeDef LSM6DSL_ReadAccel(float accel[3]);
 
 #endif /* INC_LSM6DSL_H_ */
