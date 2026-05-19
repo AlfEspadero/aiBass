@@ -29,6 +29,7 @@
 #include <stdio.h>
 #include "LSM6DSL.h"
 #include "NanoEdgeAI.h"
+#include "WS2812.h"
 
 /* USER CODE END Includes */
 
@@ -92,12 +93,19 @@ osThreadId_t neai_classifyHandle;
 const osThreadAttr_t neai_classify_attributes = {
   .name = "neai_classify",
   .stack_size = 256 * 4,
-  .priority = (osPriority_t) osPriorityAboveNormal,
+  .priority = (osPriority_t) osPriorityNormal,
 };
 /* Definitions for acquire_window */
 osThreadId_t acquire_windowHandle;
 const osThreadAttr_t acquire_window_attributes = {
   .name = "acquire_window",
+  .stack_size = 256 * 4,
+  .priority = (osPriority_t) osPriorityNormal,
+};
+/* Definitions for ledtask */
+osThreadId_t ledtaskHandle;
+const osThreadAttr_t ledtask_attributes = {
+  .name = "ledtask",
   .stack_size = 256 * 4,
   .priority = (osPriority_t) osPriorityAboveNormal,
 };
@@ -120,6 +128,7 @@ const osMutexAttr_t uartTxMutex_attributes = {
 void StartDefaultTask(void *argument);
 void t_neai_classify(void *argument);
 void t_acquire_window(void *argument);
+void t_ledtask(void *argument);
 
 void MX_FREERTOS_Init(void); /* (MISRA C 2004 rule 8.1) */
 
@@ -165,8 +174,15 @@ void MX_FREERTOS_Init(void) {
   /* creation of acquire_window */
   acquire_windowHandle = osThreadNew(t_acquire_window, NULL, &acquire_window_attributes);
 
+  /* creation of ledtask */
+  ledtaskHandle = osThreadNew(t_ledtask, NULL, &ledtask_attributes);
+
   /* USER CODE BEGIN RTOS_THREADS */
   /* add threads, ... */
+  if ((defaultTaskHandle == NULL) || (neai_classifyHandle == NULL)
+  		|| (acquire_windowHandle == NULL) || (ledtaskHandle == NULL)) {
+  	Error_Handler();
+  }
   /* USER CODE END RTOS_THREADS */
 
   /* USER CODE BEGIN RTOS_EVENTS */
@@ -255,6 +271,39 @@ void t_acquire_window(void *argument)
 		osDelay(1);
 	}
   /* USER CODE END t_acquire_window */
+}
+
+/* USER CODE BEGIN Header_t_ledtask */
+/**
+* @brief Function implementing the ledtask thread.
+* @param argument: Not used
+* @retval None
+*/
+/* USER CODE END Header_t_ledtask */
+void t_ledtask(void *argument) {
+	/* USER CODE BEGIN t_ledtask */
+	/* Infinite loop */
+	for (;;) {
+		for (int i = 0; i < 3; i++) {
+			switch (i) {
+			case 0:
+				WS2812_Set_All_LED(255, 0, 0);
+				break;
+			case 1:
+				WS2812_Set_All_LED(0, 255, 0);
+				break;
+			case 2:
+				WS2812_Set_All_LED(0, 0, 255);
+				break;
+			default:
+				WS2812_Clear_LED();
+				break;
+			}
+			WS2812_Update();
+			osDelay(1000);
+		}
+	}
+	/* USER CODE END t_ledtask */
 }
 
 /* Private application code --------------------------------------------------*/

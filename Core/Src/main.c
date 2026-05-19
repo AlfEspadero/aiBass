@@ -21,9 +21,11 @@
 #include "cmsis_os.h"
 #include "adc.h"
 #include "dfsdm.h"
+#include "dma.h"
 #include "i2c.h"
 #include "octospi.h"
 #include "spi.h"
+#include "tim.h"
 #include "usart.h"
 #include "usb_otg.h"
 #include "gpio.h"
@@ -37,6 +39,7 @@
 #include "NanoEdgeAI.h"
 
 #include "LSM6DSL.h"
+#include "WS2812.h"
 
 /* USER CODE END Includes */
 
@@ -110,6 +113,7 @@ int main(void)
 
   /* Initialize all configured peripherals */
   MX_GPIO_Init();
+  MX_DMA_Init();
   MX_ADC1_Init();
   MX_DFSDM1_Init();
   MX_I2C1_Init();
@@ -121,6 +125,7 @@ int main(void)
   MX_USART2_UART_Init();
   MX_USART3_UART_Init();
   MX_USB_OTG_FS_USB_Init();
+  MX_TIM2_Init();
   /* USER CODE BEGIN 2 */
 
 	if (LSM6DSL_Init() != HAL_OK) {
@@ -131,6 +136,11 @@ int main(void)
 	if (error_code != NEAI_OK) {
 		/* Check the returned error code (cf NanoEdgeAI.h). */
 	}
+
+	WS2812_Clear_LED();
+	//WS2812_Set_Brightness(45);
+	WS2812_Set_All_LED(255, 0, 0);
+	WS2812_Update();
 
   /* USER CODE END 2 */
 
