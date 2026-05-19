@@ -25,6 +25,8 @@
 #include <string.h>
 #include <stdio.h>
 
+#include "NanoEdgeAI.h"
+
 #include "LSM6DSL.h"
 
 /* USER CODE END Includes */
@@ -37,7 +39,10 @@
 /* Private define ------------------------------------------------------------*/
 /* USER CODE BEGIN PD */
 
-#define N_SAMPLE 64
+#define WINDOW_SIZE 64
+#define AXES 3
+
+static float window[WINDOW_SIZE * AXES];
 
 /* USER CODE END PD */
 
@@ -89,6 +94,34 @@ static void MX_USB_OTG_FS_USB_Init(void);
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
 
+float input_user_buffer[NEAI_INPUT_SIGNAL_LENGTH * NEAI_INPUT_AXIS_NUMBER];
+float probabilities[NEAI_NUMBER_OF_CLASSES]; // Buffer of class probabilities
+
+void acquire_window(void) {
+	for (int i = 0; i < WINDOW_SIZE; i++) {
+		while (!LSM6DSL_DataReady())
+			;
+		LSM6DSL_ReadAccel(&window[3 * i]);
+	}
+}
+
+void transmit_window(void) {
+	for (int i = 0; i < WINDOW_SIZE; i++) {
+		printf("%f %f %f ", window[3 * i], window[3 * i + 1],
+				window[3 * i + 2]);
+	}
+	printf("\r\n");
+}
+
+void fill_buffer(float input_buffer[]){
+	uint16_t i;
+	for (i=0;i<NEAI_INPUT_SIGNAL_LENGTH;i++){
+		while(!LSM6DSL_DataReady())
+			;
+		LSM6DSL_ReadAccel(&input_buffer[NEAI_INPUT_AXIS_NUMBER*i]);
+	}
+}
+
 /* USER CODE END 0 */
 
 /**
@@ -137,22 +170,23 @@ int main(void) {
 
 	LSM6DSL_Init();
 
+	enum neai_state error_code = neai_classification_init();
+	if (error_code != NEAI_OK) {
+		/* Check the returned error code (cf NanoEdgeAI.h). */
+	}
+
 	/* USER CODE END 2 */
 
 	/* Infinite loop */
 	/* USER CODE BEGIN WHILE */
+	int id_class = 0;
 	while (1) {
-		float acceleration[3];
-
-		for (uint16_t i = 0; i < N_SAMPLE; i++) {
-			while (!LSM6DSL_DataReady());
-			LSM6DSL_ReadAccel(acceleration);
-
-			printf("%.3f %.3f %.3f ", acceleration[0], acceleration[1],
-					acceleration[2]);
-
-		}
+		acquire_window();
+		//transmit_window();
+		neai_classification(window, probabilities, &id_class);
+		printf(neai_get_class_name(id_class));
 		printf("\r\n");
+		HAL_Delay(50);
 		/* USER CODE END WHILE */
 
 		/* USER CODE BEGIN 3 */
