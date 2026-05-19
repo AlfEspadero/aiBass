@@ -58,3 +58,4 @@ dkms.conf
 # Custom
 .DS_Store
 alfignore/
+Debug/
