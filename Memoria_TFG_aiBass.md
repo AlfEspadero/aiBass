@@ -1,67 +1,35 @@
-# Memoria TFG — aiBass (Borrador base editable)
-
-> **Importante**  
-> Este documento está redactado para que puedas pasarlo a Google Docs y completar los huecos.  
-> Los apartados cuantitativos se han completado con **estimaciones conservadoras** para facilitar la edición final en Google Docs.
+# aiBass
 
 ---
 
-## Distribución objetivo de páginas (aprox. 60 en total)
-
-| Apartado | Páginas objetivo |
-|---|---:|
-| 1. Portada | 1 |
-| 2. Resumen | 1 |
-| 3. Abstract | 1 |
-| 4. Índice | 1 |
-| 5. Índice de figuras | 1 |
-| 6. Objetivos | 2 |
-| 7. Introducción | 4 |
-| 8. Estado del arte | 8 |
-| 9. Tecnologías empleadas | 6 |
-| 10. Arquitectura del sistema | 4 |
-| 11. Desarrollo | 16 |
-| 12. Pruebas del sistema | 6 |
-| 13. Planificación temporal | 3 |
-| 14. Costes | 3 |
-| 15. Conclusiones | 1 |
-| 16. Trabajo futuro | 1 |
-| 17. Bibliografía | 1 |
-| 18. Anexos | 1 |
-| **TOTAL** | **60** |
-
-### Control rápido de cumplimiento de plantilla oficial
-
-- **Resumen**: redactado para mantenerse en 1 página.
-- **Resumen en inglés**: incluido.
-- **Objetivos**: separados en profesional y educacional.
-- **Introducción**: preparada para 4-5 páginas.
-- **Estado del arte**: estructurado por soluciones comparables con pros/contras.
-- **Tecnologías**: incluye hardware, software y espacio para fotografías/datasheets.
-- **Arquitectura**: incluye diagrama global y relación tecnología-bloque.
-- **Desarrollo**: incluye funcionamiento, problemas, alternativas desechadas e integración.
-- **Pruebas**: plan formal de pruebas por casos.
-- **Planificación temporal**: tabla de hitos + Gantt + análisis de tiempos.
-- **Costes**: material, personal (COCOMO u otra métrica), prototipo y producción.
-- **Conclusiones, trabajo futuro, bibliografía y anexos**: incluidos.
-
----
-
-## 1. Portada
+## Portada
 
 ![ETSII](assets/etsii.png)
 
 - Título del TFG: **aiBass**
 - Autor: **Alfonso Espadero García**
-- Curso: **2025/2026**
+- Convocatoria: **mayo de 2026**
 - Tutor: **Ángel Jiménez Fernández**
 - Cotutor: **Daniel Casanueva Morato**
 - Titulación: **Ingeniería Informática. Ingeniería de Computadores**
 - Universidad/Centro: **Universidad de Sevilla**
+- Departamento: **Arquitectura y Tecnología de Computadores**
 
 ---
 
-## 2. Resumen
+## Dedicatoria
+
+Dedicado a
+
+---
+
+## Agradecimientos
+
+Quiero agradecer a mi tutor, Ángel Jiménez Fernández por renovar en mí las ganas que tenía el día que entré por las puertas de este centro por primera vez.
+
+---
+
+## Resumen
 
 El proyecto **aiBass** plantea un sistema de inteligencia artificial embebida orientado a la detección de notas musicales en bajo eléctrico a partir de información inercial. La idea principal es aprovechar las vibraciones asociadas a la ejecución del instrumento, capturarlas mediante una IMU y procesarlas en una plataforma embebida para estimar, en tiempo real, la nota que está sonando.
 
@@ -79,7 +47,7 @@ Palabras clave: IA embebida, STM32, Afinador, Detección de notas, FreeRTOS
 
 ---
 
-## 3. Abstract
+## Abstract
 
 The **aiBass** project proposes an embedded artificial intelligence system for musical note detection in electric bass using inertial data. The main idea is to exploit instrument vibrations, capture them through an IMU, and process them on an embedded platform to estimate, in real time, which note is being played.
 
@@ -97,21 +65,21 @@ Keywords: Embedded AI, STM32, Tuner, Note detection, FreeRTOS
 
 ---
 
-## 4. Índice
+## Índice
 
 Se genera automáticamente al aplicar estilos de encabezado en Google Docs/Word.
 
 ---
 
-## 5. Índice de Figuras
+## Índice de figuras
 
 Se genera automáticamente en Google Docs/Word una vez insertadas y tituladas todas las figuras.
 
 ---
 
-## 6. Objetivos del proyecto
+## Objetivos del proyecto
 
-### 6.1 Objetivos técnicos/profesionales
+### Objetivos técnicos/profesionales
 
 1. Diseñar una solución de detección de notas en bajo basada en señales inerciales.
 2. Implementar una cadena completa desde captura de datos hasta inferencia embebida.
@@ -121,7 +89,30 @@ Se genera automáticamente en Google Docs/Word una vez insertadas y tituladas to
 6. Analizar el comportamiento del sistema ante cambios de montaje y condiciones de medida.
 7. Estructurar el firmware sobre **FreeRTOS** para facilitar ampliaciones funcionales futuras.
 
-### 6.2 Objetivos formativos/educacionales
+#### Desarrollo de los objetivos técnicos/profesionales
+
+**1) Diseñar una solución de detección de notas en bajo basada en señales inerciales.**  
+Este objetivo define la aportación principal del trabajo: abordar un problema musical clásico con una vía de captura distinta a la habitual basada en audio. El diseño de la solución no se limitó a seleccionar un sensor, sino a estructurar una propuesta completa que incluyera hipótesis de medida, estrategia de validación y criterios de decisión para iterar cuando los resultados no fueran estables.
+
+**2) Implementar una cadena completa desde captura de datos hasta inferencia embebida.**  
+La meta no era obtener un modelo aislado en un entorno de laboratorio, sino cerrar el ciclo extremo a extremo dentro del propio sistema embebido. Esto exigió coordinar adquisición, preprocesado, llamada a la librería de clasificación y publicación del resultado en tiempo real, manteniendo coherencia entre todas las etapas y evitando soluciones parciales difíciles de defender en una memoria técnica.
+
+**3) Construir y gestionar un conjunto de datos representativo de las clases objetivo.**  
+La calidad del dataset condiciona de forma directa la utilidad del clasificador, por lo que se planteó como un objetivo explícito y no como una tarea secundaria. Se buscó capturar muestras con suficiente variabilidad para evitar sobreajuste a una sesión concreta, manteniendo además un etiquetado coherente que permitiera iterar el entrenamiento sin degradar trazabilidad.
+
+**4) Desarrollar un clasificador capaz de distinguir E, A, D, G y ruido/silencio.**  
+Este objetivo concreta el alcance funcional del prototipo y permite medir el progreso de forma objetiva. Incluir la clase de ruido/silencio fue clave para acercar el comportamiento a una situación real de uso, donde no siempre existe una nota válida y el sistema debe ser capaz de discriminar reposo, ruido ambiental o ejecución no interpretable.
+
+**5) Integrar una salida de resultado en tiempo real mediante interfaz serie.**  
+La salida serie se planteó como interfaz mínima viable para depuración y validación del sistema durante el desarrollo. Aunque no es una interfaz final para usuario, proporciona observabilidad inmediata, permite registrar secuencias de clasificación y facilita la comparación entre versiones de firmware, cambios de montaje y ajustes de modelo.
+
+**6) Analizar el comportamiento del sistema ante cambios de montaje y condiciones de medida.**  
+La experiencia del proyecto confirmó que el rendimiento depende tanto del modelo como del contexto físico de captura. Este objetivo obliga a tratar el sistema como un conjunto integrado hardware-software, documentando cómo afectan la fijación del sensor, la forma de ejecución y la repetibilidad entre sesiones a la estabilidad de la salida.
+
+**7) Estructurar el firmware sobre FreeRTOS para facilitar ampliaciones funcionales futuras.**  
+Más allá de resolver el prototipo actual, se buscó dejar una base de ingeniería mantenible para futuras iteraciones. La adopción de FreeRTOS permite desacoplar responsabilidades entre tareas, reducir dependencias cruzadas y preparar el proyecto para incorporar nuevas funcionalidades sin rehacer la arquitectura desde cero.
+
+### Objetivos formativos/educacionales
 
 1. Profundizar en sistemas embebidos orientados a IA en el borde (edge AI).
 2. Aprender metodologías de adquisición de datos para clasificación supervisada.
@@ -130,19 +121,29 @@ Se genera automáticamente en Google Docs/Word una vez insertadas y tituladas to
 5. Mejorar la capacidad de toma de decisiones técnicas ante resultados no ideales.
 6. Evaluar y descartar de forma justificada alternativas tecnológicas cuando no encajan en alcance/plazo (caso Rust + Embassy).
 
-### 6.3 Relación con objetivos inicialmente planteados
+#### Desarrollo de los objetivos formativos/educacionales
 
-| Objetivo inicial | Estado | Evidencia |
-|---|---|---|
-| Estudiar posicionamiento del sensor e interfaz FW/SW | Completado | Pruebas en mástil y transición a prueba en amplificador |
-| Construir dataset de muestras | Completado (versión inicial) | Dataset etiquetado para E, A, D, G y ruido/silencio |
-| Diseñar y entrenar IA embebida | Completado (iterativo) | Tres iteraciones de modelo y selección de versión final por equilibrio robustez/latencia |
-| Implementar interfaz de usuario/representación | Parcial | Salida serie de clase detectada (a falta de pantalla LCD o alternativa) |
-| Evaluar desempeño de la IA | Completado (nivel prototipo) | Exactitud global en entorno controlado y pruebas de robustez con variaciones de ejecución |
+**1) Profundizar en sistemas embebidos orientados a IA en el borde (edge AI).**  
+El proyecto ha servido para trabajar con restricciones reales de memoria, latencia e integración periférica, que suelen quedar fuera de ejercicios puramente académicos. Esta experiencia ha consolidado una visión práctica de la IA embebida como disciplina de compromiso entre precisión, coste computacional y mantenibilidad.
+
+**2) Aprender metodologías de adquisición de datos para clasificación supervisada.**  
+Una parte central del aprendizaje fue diseñar cómo capturar datos útiles y no solo cómo entrenar con ellos. Definir protocolos repetibles, criterios de etiquetado y mecanismos de control básico de calidad permitió entender que, en muchos casos, el cuello de botella de un sistema inteligente no está en el algoritmo, sino en la fase de datos.
+
+**3) Consolidar competencias de validación experimental y análisis de resultados.**  
+La validación se abordó como proceso iterativo, comparando escenarios, analizando errores y revisando decisiones de diseño en función de evidencia experimental. Este enfoque fortaleció la capacidad para interpretar resultados con criterio técnico y comunicar limitaciones de forma honesta dentro del alcance de un prototipo.
+
+**4) Practicar integración HW/SW en un contexto realista de prototipado.**  
+La implementación obligó a coordinar sensores, firmware, planificación de tareas y canal de salida, reproduciendo problemas típicos de proyectos embebidos reales. Esta integración ha reforzado habilidades transversales de depuración, instrumentación y estructuración modular del software.
+
+**5) Mejorar la capacidad de toma de decisiones técnicas ante resultados no ideales.**  
+El proyecto incluyó decisiones de cambio de rumbo relevantes, como revisar la ubicación del sensor o acotar funcionalidades para priorizar robustez. Aprender a abandonar opciones poco viables, incluso cuando eran técnicamente atractivas, ha sido uno de los aprendizajes de ingeniería más importantes del TFG.
+
+**6) Evaluar y descartar de forma justificada alternativas tecnológicas cuando no encajan en alcance/plazo (caso Rust + Embassy).**  
+La fase de exploración en Rust + Embassy aportó valor formativo incluso sin materializarse en la versión final del firmware. Permitió comparar ecosistemas, identificar costes de integración y fundamentar una decisión de descarte basada en alcance, calendario y riesgo técnico, no en preferencias personales.
 
 ---
 
-## 7. Introducción
+## Introducción
 
 La digitalización de instrumentos musicales ha estado tradicionalmente ligada a captadores electromagnéticos, sistemas de análisis de audio o dispositivos externos de procesado. En paralelo, la evolución de los sensores MEMS y del cómputo embebido ha abierto una alternativa interesante: inferir información musical a partir de vibraciones y movimiento, reduciendo la dependencia de cadenas de audio convencionales.
 
@@ -150,9 +151,15 @@ El bajo eléctrico, por su función rítmica y armónica, ofrece un escenario at
 
 Este proyecto aborda el problema desde una perspectiva aplicada. En lugar de centrarse únicamente en el entrenamiento de un modelo, se desarrolla una cadena completa que incluye decisiones de montaje físico del sensor, diseño del flujo de datos, clasificación y visualización de salida. El interés académico y profesional reside precisamente en esa integración de disciplinas.
 
+Desde la óptica de ingeniería, aiBass se plantea como un caso de estudio de diseño iterativo en sistemas ciberfísicos de bajo coste. El objetivo no es únicamente "hacer funcionar un clasificador", sino construir una solución defendible donde cada decisión tenga trazabilidad técnica: por qué se selecciona una plataforma concreta, cómo se justifica un protocolo de captura, qué compromisos se aceptan entre complejidad y robustez, y qué límites funcionales se reconocen explícitamente para no sobredimensionar conclusiones.
+
+También es relevante destacar que la propuesta se sitúa en un espacio intermedio entre investigación y prototipado aplicado. No se persigue competir directamente con afinadores comerciales especializados, sino demostrar la viabilidad de una ruta alternativa basada en señal inercial para abrir nuevas posibilidades de interacción musical en contextos educativos y de experimentación técnica.
+
 Además, el proyecto tiene una dimensión iterativa: los resultados experimentales han condicionado decisiones clave del diseño. La comparación entre la colocación inicial del sensor en el mástil y configuraciones posteriores ilustra que el rendimiento final no depende solo del algoritmo, sino del sistema completo (instrumento, entorno, montaje y procesamiento).
 
 Desde una perspectiva social y tecnológica, iniciativas como aiBass se enmarcan en una tendencia de democratización de herramientas inteligentes para creación musical. Un sistema de este tipo puede evolucionar hacia soluciones de asistencia en práctica instrumental, accesibilidad o interacción hombre-máquina en escenarios de bajo coste.
+
+Finalmente, esta memoria adopta una visión deliberadamente crítica de los resultados: se describen logros funcionales, pero también se documentan fronteras de validez, condiciones bajo las que el sistema pierde estabilidad y decisiones de alcance que se han tomado para priorizar consistencia técnica. Esta forma de presentación pretende facilitar una evaluación académica rigurosa y, al mismo tiempo, servir de base realista para una evolución posterior del proyecto.
 
 **Figura 1. Contexto del proyecto y flujo general de uso.**  
 Insertar un diagrama simple con el flujo: *ejecución de nota* -> *captura IMU* -> *preprocesado* -> *clasificación NanoEdge* -> *salida serie*.
@@ -165,9 +172,13 @@ También ha sido un trabajo de aprendizaje orientado a la toma de decisiones de 
 
 ---
 
-## 8. Estado del arte
+## Estado del arte
 
-### 8.1 Sistemas de detección de nota basados en audio
+### Objetivo del apartado
+
+El objetivo de este apartado es situar aiBass frente a soluciones existentes y trabajos relacionados para justificar, con criterio técnico, tanto su enfoque como su alcance. No se trata solo de listar referencias, sino de identificar qué problemas están bien resueltos en la literatura y en producto comercial, y qué hueco concreto aborda este proyecto.
+
+### Sistemas de detección de nota basados en audio
 
 Los enfoques clásicos de detección de nota en instrumentos de cuerda suelen apoyarse en señal de audio. Estos sistemas aprovechan técnicas como análisis espectral, autocorrelación o modelos de aprendizaje sobre características acústicas. Su principal ventaja es la cercanía con la magnitud física directamente perceptible (frecuencia/pitch). Como limitación, pueden verse afectados por ruido ambiental, latencia de procesamiento y dependencia de una cadena de captación adecuada.
 
@@ -181,7 +192,9 @@ Los enfoques clásicos de detección de nota en instrumentos de cuerda suelen ap
 
 Como referencias representativas dentro de este enfoque pueden citarse el trabajo de **Madero Ayora (2024)** sobre afinación digital embebida y la documentación técnica/comercial de afinadores de audio en tiempo real como **PolyTune 3 (TC Electronic, s. f.)**.
 
-### 8.2 Afinadores y soluciones comerciales de ayuda al instrumentista
+En conjunto, estas propuestas muestran que la vía acústica dispone de una madurez muy superior en producto final y experiencia de usuario. Sin embargo, también evidencian una dependencia fuerte de la cadena de audio y del entorno sonoro. Esa dependencia es precisamente la motivación para explorar en aiBass una ruta complementaria: aprovechar información mecánica local mediante IMU para reducir, en ciertos escenarios, la sensibilidad al entorno acústico externo.
+
+### Afinadores y soluciones comerciales de ayuda al instrumentista
 
 Existen múltiples dispositivos orientados a afinación o asistencia musical. Aunque no todos realizan clasificación de nota con el mismo objetivo que aiBass, su análisis permite comparar precisión, experiencia de usuario y viabilidad de producto.
 
@@ -197,7 +210,9 @@ Contras: coste superior y enfoque cerrado como afinador, no como plataforma de i
 Pros: accesibilidad alta, sin hardware dedicado y útil para aprendizaje inicial.  
 Contras: dependencia del micrófono/entorno acústico y menor control sobre condiciones de medida.
 
-### 8.3 Interfaces MIDI para guitarra/bajo
+La comparativa comercial resulta útil para fijar expectativas de producto, pero también para delimitar honestamente el alcance del TFG. Mientras que los productos consolidados optimizan experiencia final y estabilidad en múltiples contextos de uso, aiBass centra su valor en la exploración técnica de una arquitectura alternativa embebida. Por ello, la comparación debe leerse más como análisis de referencia que como comparación directa de prestaciones finales.
+
+### Interfaces MIDI para guitarra/bajo
 
 Los captadores y convertidores MIDI constituyen una familia relevante de referencia. Suelen buscar traducción de la interpretación a eventos musicales discretos, aunque la tecnología de captura puede diferir (hexafónica, audio digital, etc.).
 
@@ -205,7 +220,9 @@ Comparativamente, aiBass explora una vía alternativa basada en IMU, con potenci
 
 Como referencias de esta categoría destacan soluciones como **Fishman TriplePlay** (captación orientada a control MIDI) y sistemas de pastilla/controlador como **Roland GK**, que convierten interpretación instrumental en eventos discretos para síntesis o producción.
 
-### 8.4 Sistemas basados en sensores inerciales (IMU) aplicados a música
+La principal enseñanza para aiBass de esta familia de soluciones es que la traducción de interpretación instrumental a eventos discretos es una necesidad real con aplicaciones inmediatas. Aun cuando la tecnología de captura difiere, el paralelismo conceptual con la clasificación de clases musicales en tiempo real permite plantear una futura integración de salida MIDI como evolución natural del prototipo.
+
+### Sistemas basados en sensores inerciales (IMU) aplicados a música
 
 Como referencia cercana en el dominio musical, puede citarse el TFG de **Madero Ayora (2024)** sobre un afinador electrónico embebido. Aunque comparte el objetivo de apoyo al instrumentista, su enfoque técnico se basa en una cadena diferente a aiBass, por lo que sirve como antecedente de contexto más que como réplica metodológica directa.
 
@@ -217,7 +234,9 @@ De forma complementaria, **Provenzale et al. (2021)** estudian la técnica de ar
 
 En síntesis, el estado del arte revisado confirma que las IMU son una tecnología válida para análisis musical y entrenamiento instrumental, pero deja menos cubierto el caso específico de **clasificación embebida de notas de bajo** en tiempo real. Precisamente ahí se sitúa la aportación de aiBass.
 
-### 8.5 Aportación diferencial de aiBass
+Además, la revisión realizada permite identificar una brecha metodológica concreta: muchos trabajos con IMU en música se enfocan en gesto, postura o técnica, mientras que la identificación de nota en bajo exige una discriminación de clases con fronteras más estrechas y mayor sensibilidad a variaciones de ejecución. Esta diferencia justifica que aiBass dedique tanto esfuerzo a protocolo de captura, montaje físico y consistencia temporal de las ventanas de entrada.
+
+### Aportación diferencial de aiBass
 
 Frente al estado del arte revisado, aiBass aporta:
 
@@ -235,11 +254,17 @@ Frente al estado del arte revisado, aiBass aporta:
 | Trabajos IMU musicales (literatura) | IMU wearable | Gesto/técnica | Discreta (gesto) | N/A | Validan IMU en música, no se centran en afinación |
 | **aiBass** | **IMU integrada (LSM6DSL)** | **Clase de nota por serie** | **Discreta (E/A/D/G/ruido)** | **~50 EUR hardware base** | **Prototipo embebido de bajo coste con arquitectura ampliable (FreeRTOS)** |
 
+Esta comparación no pretende afirmar superioridad global de aiBass frente a soluciones comerciales o académicas consolidadas. Su función es situar con precisión la contribución del proyecto: demostrar viabilidad técnica de una cadena embebida inercial para clasificación de notas fundamentales, con coste de entrada reducido y una arquitectura software preparada para crecimiento funcional.
+
 ---
 
-## 9. Tecnologías empleadas
+## Tecnologías Empleadas
 
-### 9.1 Plataforma embebida principal
+### Objetivo del apartado
+
+Este apartado describe las tecnologías seleccionadas y, sobre todo, la razón de su elección dentro del contexto del TFG. La intención es dejar clara la relación entre requisitos del proyecto, capacidades de cada componente y decisiones de arquitectura tomadas durante el desarrollo.
+
+### Plataforma embebida principal
 
 La plataforma principal de desarrollo es el **Discovery kit B-L4S5I-IOT01A**, basado en el microcontrolador **STM32L4S5VIT6** (familia STM32L4+, núcleo Arm Cortex-M4). Esta placa integra recursos suficientes para un prototipo de IA embebida y, al mismo tiempo, mantiene un enfoque de bajo consumo.
 
@@ -252,9 +277,11 @@ Características destacables para este trabajo:
 3. Conectividad y expansión (USB, cabeceras, conectores de expansión), que facilitan pruebas y evolución del prototipo.
 4. Ecosistema software maduro (STM32Cube y documentación oficial), adecuado para desarrollo académico.
 
+Desde el punto de vista de viabilidad de TFG, la elección de esta plataforma también reduce riesgo de integración, ya que combina disponibilidad de ejemplos, soporte comunitario y documentación oficial extensa. Esto permitió dedicar más esfuerzo a la parte diferencial del proyecto (captura inercial y clasificación) en lugar de consumir tiempo en problemas de arranque de plataforma.
+
 ![Figura 2. Discovery kit B-L4S5I-IOT01A (fuente: STMicroelectronics)](https://www.st.com/bin/ecommerce/api/image.PF270120.en.feature-description-include-personalized-no-cpn-large.jpg)
 
-### 9.2 Sensor inercial
+### Sensor inercial
 
 La IMU empleada es la **LSM6DSL**, un módulo inercial de 6 ejes (acelerómetro 3D + giroscopio 3D). Para este proyecto resulta especialmente adecuada por su equilibrio entre prestaciones, consumo y disponibilidad dentro del propio kit de desarrollo.
 
@@ -267,7 +294,9 @@ De acuerdo con la documentación del fabricante, el sensor permite:
 
 En aiBass, la LSM6DSL actúa como fuente principal de señal para construir ventanas temporales que posteriormente se clasifican en las clases musicales objetivo.
 
-### 9.3 Firmware y herramientas de desarrollo
+Otro aspecto clave es la repetibilidad de medida. Al integrarse en la propia placa, la IMU reduce variabilidad introducida por cableado y electrónica externa, lo que simplifica la fase de prototipado temprano. Aunque esta integración no elimina por sí sola la variabilidad física del montaje, sí aporta una base de adquisición estable para comparar iteraciones de firmware y modelo.
+
+### Firmware y herramientas de desarrollo
 
 El desarrollo firmware se ha apoyado en el ecosistema STM32 para configurar periféricos, adquirir señal inercial y publicar resultados por serie. En términos funcionales, el firmware implementa tres bloques: captura de muestras IMU, preparación de entrada para inferencia y envío de etiqueta de clase detectada.
 
@@ -281,7 +310,9 @@ Herramientas y componentes de trabajo empleados:
 
 Además, el proyecto incorporó una fase específica de evaluación de una alternativa tecnológica basada en **Rust + Embassy** (aprox. 100 h), inicialmente descartada para el cierre del prototipo, pero considerada relevante para evolución futura.
 
-### 9.4 Pipeline de IA
+La decisión de mantener el cierre funcional en C sobre el ecosistema STM32 responde a un criterio de entrega técnica: maximizar probabilidad de obtener un prototipo estable y defendible en el marco temporal del TFG. Este criterio no invalida la alternativa Rust/Embassy, sino que ordena prioridades entre exploración tecnológica y finalización del sistema.
+
+### Pipeline de IA
 
 La cadena de IA del proyecto sigue un enfoque clásico de clasificación supervisada adaptado a restricciones embebidas:
 
@@ -294,13 +325,17 @@ Como referencia de herramientas para edge AI en entorno STM32, se ha tenido en c
 
 En esta configuración, la inferencia se plantea como un problema de clasificación discreta de clases musicales. Por ello, intentos de extraer una medida continua de desviación tonal (afinación por centésimas) quedan fuera de las capacidades del modelo actual.
 
-### 9.5 Interfaz de salida
+Esta delimitación de alcance es importante para interpretar correctamente los resultados del proyecto. El sistema actual responde a la pregunta "qué clase de nota se detecta" dentro del conjunto definido, pero no estima con precisión fina la desviación tonal dentro de una misma clase. Distinguir claramente ambas capacidades evita evaluar el prototipo con criterios de afinador cromático avanzado que no forman parte del objetivo funcional actual.
+
+### Interfaz de salida
 
 La interfaz actual de interacción es **serial (UART)**, orientada a depuración y validación rápida de resultados. La salida se emite en formato textual con la clase detectada en cada instante de decisión, lo que permite revisar de forma inmediata la estabilidad del sistema durante las pruebas.
 
 Este enfoque simplifica el ciclo de experimentación: facilita observar errores de clasificación, comparar comportamientos entre montajes físicos y ajustar el pipeline sin necesidad de una interfaz gráfica compleja.
 
-### 9.6 Tecnologías auxiliares
+Adicionalmente, la salida textual por serie habilita la creación de registros de ejecución para análisis posterior, algo especialmente útil cuando se comparan cambios de configuración entre sesiones. Aunque en una versión de producto final la interfaz debería evolucionar, en la fase de TFG esta elección aporta una relación coste-beneficio muy favorable para depuración y validación.
+
+### Tecnologías auxiliares
 
 Como soporte al desarrollo se han utilizado tecnologías auxiliares de uso habitual en proyectos software/embebidos:
 
@@ -308,11 +343,17 @@ Como soporte al desarrollo se han utilizado tecnologías auxiliares de uso habit
 2. Herramientas de tratamiento de datos para organizar muestras y resultados experimentales.
 3. Documentación técnica del ecosistema STM32 y de la sensórica empleada para guiar decisiones de diseño.
 
+Estas tecnologías auxiliares, pese a no formar parte del "núcleo algorítmico", han tenido un impacto directo en la calidad del proyecto. La trazabilidad de versiones permitió mantener historial de decisiones técnicas, mientras que la documentación centralizada facilitó justificar elecciones de arquitectura y limitar ambigüedades durante la redacción de la memoria.
+
 ---
 
-## 10. Arquitectura del sistema
+## Arquitectura del sistema
 
-### 10.1 Visión global
+### Objetivo del apartado
+
+El objetivo de esta sección es presentar una visión estructurada del sistema para entender cómo se conectan captura, inferencia y salida. Definir claramente los bloques y sus interfaces facilita tanto la comprensión del diseño actual como la planificación de futuras ampliaciones.
+
+### Visión global
 
 La arquitectura funcional de aiBass puede representarse como una tubería de procesamiento:
 
@@ -324,10 +365,12 @@ La arquitectura funcional de aiBass puede representarse como una tubería de pro
 
 La orquestación de estos bloques se apoya en **FreeRTOS**, permitiendo desacoplar adquisición, inferencia y comunicación para facilitar evolución futura del sistema.
 
+Esta visión por bloques ayuda a separar decisiones de distinta naturaleza: decisiones de señal (qué se captura y cómo se preprocesa), decisiones de inferencia (cómo se clasifica) y decisiones de sistema (cómo se coordina y publica resultado). En términos de mantenibilidad, esta separación reduce el impacto de cambios locales y simplifica la incorporación de nuevas salidas o estrategias de postprocesado.
+
 **Figura 4. Diagrama de bloques de la arquitectura funcional.**  
 Insertar diagrama a página completa con los bloques A/B/C/D y las tareas FreeRTOS asociadas.
 
-### 10.2 Bloques principales
+### Bloques principales
 
 #### Bloque A — Captura IMU
 Adquiere muestras del LSM6DSL con la configuración de muestreo definida.
@@ -341,7 +384,7 @@ Genera la etiqueta de clase entre {E, A, D, G, ruido}.
 #### Bloque D — Salida y monitorización
 Emite la clase detectada por puerto serie y facilita la depuración.
 
-### 10.3 Relación tecnología-bloque
+### Relación tecnología-bloque
 
 | Bloque | Tecnología principal | Observaciones |
 |---|---|---|
@@ -350,17 +393,29 @@ Emite la clase detectada por puerto serie y facilita la depuración.
 | C | Modelo IA NanoEdge (clasificación multiclase) | Clasificación discreta por categorías |
 | D | UART/Serial | Diagnóstico y salida |
 
+Desde una perspectiva de evolución, esta distribución tecnológica permite planificar mejoras de forma incremental. Por ejemplo, cambios de interfaz de usuario afectarían principalmente al Bloque D, mientras que mejoras de robustez de clasificación podrían centrarse en Bloques B y C sin necesidad de modificar profundamente la captura hardware del Bloque A. Esta modularidad es una de las razones por las que se priorizó una estructura basada en tareas.
+
 ---
 
-## 11. Desarrollo
+## Desarrollo
 
-### 11.1 Enfoque de desarrollo iterativo
+### Objetivo del apartado
+
+El objetivo de este apartado es documentar el proceso de implementación real, incluyendo iteraciones, problemas y decisiones de ingeniería tomadas durante el camino. Esta perspectiva procesual es relevante porque explica por qué la solución final es como es, y no solo qué resultado se obtuvo.
+
+### Enfoque de desarrollo iterativo
 
 El desarrollo se abordó de manera incremental: primero asegurar captura estable de señal, después construir un primer clasificador funcional y, finalmente, cerrar el bucle de inferencia en tiempo real con salida observable.
 
-También se trabajó en dos líneas de código diferenciadas: una rama inicial orientada a **DataLogger** (captura/registro sin FreeRTOS) y la rama actual de **clasificador embebido** (con FreeRTOS y salida de clases en tiempo real). Esta separación facilitó mantener un camino estable para adquisición y otro para integración de inferencia.
+Este enfoque iterativo fue esencial para controlar el riesgo técnico. En un proyecto con acoplamiento fuerte entre montaje físico, señal y firmware, intentar cerrar todas las piezas a la vez habría dificultado identificar causas de error. Separar fases permitió aislar problemas, validar hipótesis y tomar decisiones de alcance con evidencia.
 
-### 11.2 Fase de investigación en Rust + Embassy (aprox. 100 horas)
+### Gestión de ramas de trabajo y transición funcional
+
+Durante el desarrollo se mantuvieron dos líneas de evolución de firmware con objetivos diferentes: una rama inicial orientada a **DataLogger** (captura y registro de datos, sin FreeRTOS) y la rama actual orientada a **clasificador embebido** con arquitectura por tareas. Esta separación práctica ayudó a no bloquear el avance global del proyecto cuando una línea concreta requería más experimentación.
+
+La rama de DataLogger resultó especialmente útil en fases tempranas para comprobar calidad de señal y consistencia de etiquetado. La rama de clasificador, por su parte, concentró la integración de inferencia y salida en tiempo real, incorporando progresivamente mejoras de concurrencia y robustez de comunicación. Mantener ambas líneas redujo regresiones y facilitó comparar comportamientos al trasladar cambios entre versiones.
+
+### Fase de investigación en Rust + Embassy (aprox. 100 horas)
 
 Antes de consolidar la implementación actual, se dedicó una fase extensa a investigar la viabilidad de desarrollar el firmware con **Rust** sobre el ecosistema **Embassy**. Esta fase ocupó cerca de **100 horas** dentro de una dedicación total aproximada de **300 horas** del proyecto.
 
@@ -374,13 +429,15 @@ Tras la evaluación, se decidió **abandonar** esta alternativa para priorizar l
 
 Los principales bloqueos detectados en esta fase fueron: mayor complejidad de integración de ciertos drivers/periféricos respecto al flujo ya dominado en C, incremento del tiempo de depuración al combinar varias capas nuevas (toolchain + HAL + async), y falta de una ruta directa para integrar el flujo de inferencia del prototipo actual sin penalizar calendario. Aun así, la investigación fue útil para madurar criterios de diseño y deja una base reutilizable para trabajo futuro.
 
-### 11.3 Primera etapa: montaje inicial y validación temprana
+Desde el punto de vista metodológico, esta fase fue relevante porque introdujo una comparación realista entre opciones tecnológicas. El descarte no se debió a una imposibilidad técnica absoluta, sino a una priorización de objetivos: cerrar un prototipo funcional completo dentro del calendario del TFG. Esta distinción es importante para justificar por qué Rust/Embassy aparece como línea de trabajo futuro y no como decisión definitivamente cerrada.
+
+### Primera etapa: montaje inicial y validación temprana
 
 En una fase inicial se evaluó la colocación de la IMU sobre el mástil del bajo. Esta decisión partía de la hipótesis de cercanía a la fuente de vibración de la cuerda. No obstante, los resultados observados mostraron una fiabilidad insuficiente para la detección robusta de clases objetivo.
 
 En pruebas repetidas se observaron oscilaciones entre clases adyacentes y una sensibilidad elevada al modo de ataque. La fiabilidad se midió con series de ejecuciones controladas por cuerda (bloques cortos repetidos), comparando la etiqueta esperada con la salida serie del clasificador y analizando la consistencia temporal entre lecturas consecutivas.
 
-### 11.4 Cambio de estrategia de montaje
+### Cambio de estrategia de montaje
 
 Tras los resultados anteriores, se modificó el montaje para probar la IMU en una configuración alternativa (sobre el amplificador). Esta decisión responde a una lógica de ingeniería experimental: cuando la señal útil no es estable en una configuración, se replantea el punto de medida para mejorar separación entre clases.
 
@@ -389,7 +446,7 @@ Insertar dos fotos del montaje con una leyenda de ventajas/inconvenientes.
 
 Ventajas observadas en el montaje sobre amplificador: mayor estabilidad de lectura en sesiones largas, menor variabilidad mecánica de fijación y mejor repetibilidad entre pruebas. Inconvenientes: menor representatividad del gesto exacto de digitación y dependencia de la configuración física del entorno de ensayo.
 
-### 11.5 Construcción del dataset
+### Construcción del dataset
 
 Se construyó un dataset inicial etiquetado por clases objetivo a partir de ventanas temporales de señal inercial. El protocolo se organizó en bloques por cuerda (E, A, D y G), más bloques de ruido/silencio, registrando repeticiones con variaciones moderadas de intensidad para evitar un conjunto excesivamente rígido.
 
@@ -404,14 +461,16 @@ Condiciones de captura consideradas: mismo kit hardware, misma cadena firmware d
 | Ruido/silencio | 150 |
 | **Total** | **550** |
 
-### 11.6 Preprocesado y generación de características
+El diseño del dataset buscó equilibrio entre representatividad y viabilidad temporal. Aunque un conjunto mayor habría permitido una validación más extensa, la estrategia adoptada priorizó calidad del etiquetado y consistencia entre sesiones. Esta decisión fue coherente con el alcance de prototipo: garantizar una base de entrenamiento limpia y defendible antes de escalar volumen de datos.
+
+### Preprocesado y generación de características
 
 El flujo de preprocesado aplicado en la versión actual incluye: segmentación de señal en ventanas temporales de longitud fija, normalización para reducir diferencias de escala entre sesiones y selección de componentes inerciales más estables para clasificación. También se descartaron ventanas con comportamiento claramente anómalo (picos espurios de captura o tramos sin consistencia temporal).
 
 **Figura 6. Flujo de preprocesado.**  
 Insertar diagrama con: adquisición cruda -> segmentación -> normalización -> validación de ventana -> entrada a clasificador.
 
-### 11.7 Entrenamiento y validación del modelo
+### Entrenamiento y validación del modelo
 
 La librería final generada por NanoEdge tiene las siguientes características:
 - Tipo de modelo: Clasificación multiclase.
@@ -429,7 +488,9 @@ El pipeline que sigue la librería es el siguiente:
 
 El reporte final generado por la herramienta se puede encontrar en el Anexo D.
 
-### 11.8 Integración embebida
+La validación del modelo se interpretó en clave de prototipo funcional y no como resultado definitivo de producto. En consecuencia, se valoró tanto la precisión observada en entorno controlado como la estabilidad de integración en firmware y el comportamiento bajo variación de ejecución. Esta lectura integral evita sobrevalorar una única métrica y ayuda a identificar prioridades reales de mejora.
+
+### Integración embebida
 
 En esta fase se integra el modelo en la plataforma STM32L4S5VI y se enlaza con el pipeline de captura y salida serie.
 
@@ -485,7 +546,7 @@ HAL_StatusTypeDef LSM6DSL_WaitDataReady(uint32_t timeout_ms) {
 }
 ```
 
-### 11.9 Lógica de clasificación y salida serie
+### Lógica de clasificación y salida serie
 
 El sistema actual genera etiquetas de clase para:
 
@@ -512,10 +573,12 @@ if ((osKernelGetState() == osKernelRunning) && (uartTxMutexHandle != NULL)) {
 
 Durante esta fase también se evaluó una representación de afinación por centésimas, pero se descartó en la implementación actual al comprobar que el flujo basado en NanoEdge devuelve decisiones de clase discretas y no una magnitud continua de error tonal.
 
+Esta limitación se documentó como decisión de alcance y no como fallo de implementación. El prototipo cumple su objetivo de clasificación de clases definidas, pero no debe interpretarse como afinador cromático de alta resolución. Dejar esta frontera explícita mejora la consistencia técnica de la memoria y evita expectativas no alineadas con la arquitectura actual.
+
 **Figura 7. Salida serie del sistema durante una sesión de prueba.**  
 Insertar captura de terminal con secuencias de etiquetas E/A/D/G/ruido y marcas de tiempo.
 
-### 11.10 Problemas encontrados y soluciones aplicadas
+### Problemas encontrados y soluciones aplicadas
 
 | Problema | Impacto | Solución aplicada | Resultado |
 |---|---|---|---|
@@ -524,7 +587,7 @@ Insertar captura de terminal con secuencias de etiquetas E/A/D/G/ruido y marcas 
 | Integración de nuevas funcionalidades en firmware monolítico | Mantenimiento complejo y crecimiento difícil | Reorganización por tareas con FreeRTOS | Base más modular para ampliaciones futuras |
 | Intento de afinación en centésimas | No se podía expresar desviación tonal continua | Delimitar alcance a clasificación discreta y dejar cents como línea futura | Objetivo de prototipo mantenido sin sobrecargar arquitectura |
 
-### 11.11 Alternativas desechadas
+### Alternativas desechadas
 
 Durante el desarrollo se evaluaron alternativas que finalmente se descartaron en esta iteración del TFG:
 
@@ -533,11 +596,23 @@ Durante el desarrollo se evaluaron alternativas que finalmente se descartaron en
 3. Migración completa temprana a Rust + Embassy: descartada por impacto en plazo respecto al objetivo de cierre funcional.
 4. Interfaz gráfica completa en esta fase: descartada para priorizar robustez del núcleo de adquisición/inferencia.
 
+### Lecciones aprendidas durante el desarrollo
+
+Una de las lecciones más importantes fue que en sistemas embebidos con sensórica física la robustez emerge de la coherencia del conjunto, no de una única decisión brillante. En varias iteraciones se observó que pequeñas mejoras en una parte del pipeline no producían mejoras globales si el resto de componentes (montaje, protocolo de captura o sincronización entre tareas) no acompañaban.
+
+También se confirmó el valor de mantener ciclos cortos de observación y ajuste. Poder compilar, desplegar y validar rápidamente en placa permitió detectar patrones de fallo que no habrían sido visibles en pruebas aisladas de escritorio. Esta dinámica de iteración continua resultó especialmente útil para diferenciar errores de implementación de limitaciones estructurales del enfoque de clasificación discreta.
+
+Otra lección clave fue la necesidad de gestionar explícitamente el alcance funcional. La tentación de incorporar desde el inicio una interfaz más elaborada o una salida de afinación fina era alta, pero el análisis técnico mostró que avanzar en esas líneas sin consolidar antes la estabilidad base habría incrementado deuda técnica y riesgo de cierre incompleto del TFG.
+
+En el plano de arquitectura software, la incorporación de FreeRTOS aportó un aprendizaje práctico sobre diseño modular en firmware: separar adquisición, inferencia y salida no solo mejora legibilidad, también facilita aislar cuellos de botella y preparar el sistema para evolución futura. Esta decisión tuvo un coste inicial de integración, pero aportó beneficios claros a medio plazo.
+
+Finalmente, el trabajo dejó una conclusión metodológica general: documentar decisiones y descartes con la misma seriedad que los aciertos mejora la calidad técnica del proyecto. Registrar por qué una alternativa no se adopta evita repetir exploraciones de bajo rendimiento en iteraciones futuras y convierte el proceso de desarrollo en conocimiento reutilizable.
+
 ---
 
-## 12. Pruebas del sistema
+## Pruebas del sistema
 
-### 12.1 Objetivo del plan de pruebas
+### Objetivo del plan de pruebas
 
 Verificar el comportamiento del sistema en términos de:
 
@@ -546,7 +621,9 @@ Verificar el comportamiento del sistema en términos de:
 3. Robustez ante variaciones de ejecución.
 4. Estabilidad de la arquitectura por tareas con FreeRTOS bajo carga nominal del prototipo.
 
-### 12.2 Diseño de pruebas funcionales
+El plan de pruebas se diseñó para responder a preguntas de ingeniería concretas: si el sistema distingue clases de forma consistente, en qué escenarios se degrada, y qué parte de esa degradación se asocia a señal de entrada frente a limitaciones del clasificador. Esta orientación permitió utilizar las pruebas no solo como validación final, sino como guía de iteración durante el desarrollo.
+
+### Diseño de pruebas funcionales
 
 | ID | Escenario | Entrada esperada | Salida esperada | Resultado |
 |---|---|---|---|---|
@@ -556,21 +633,37 @@ Verificar el comportamiento del sistema en términos de:
 | PF-04 | Cuerda asociada a G | Señal clase G | Etiqueta G | Superado; sensible a cambios bruscos de dinámica |
 | PF-05 | Sin nota válida | Ruido/silencio | Etiqueta ruido | Superado; algunos falsos positivos aislados |
 
-### 12.3 Pruebas de robustez
+La matriz funcional no debe entenderse como una validación estadística exhaustiva, sino como una evidencia estructurada del comportamiento esperado por clase en entorno controlado. Su valor principal es aportar trazabilidad entre escenario probado, salida esperada y resultado observado, algo imprescindible para justificar decisiones de ajuste posteriores.
+
+### Pruebas de robustez
 
 Se ejecutaron pruebas de robustez en tres líneas: variación de intensidad de ataque (suave/media/fuerte), repetibilidad en bloques consecutivos y comparación entre sesiones separadas de captura. Los resultados mostraron que la estabilidad cae en ataques muy suaves y en transiciones rápidas, pero se mantiene aceptable para el objetivo de prototipo funcional.
 
-### 12.4 Discusión de resultados
+Estas pruebas fueron especialmente útiles para delimitar el dominio operativo del sistema. En términos prácticos, el clasificador muestra un comportamiento más estable cuando la señal presenta suficiente energía y continuidad temporal, mientras que en situaciones de ataque muy leve o transiciones abruptas aumenta la incertidumbre. Esta observación orienta futuras mejoras de preprocesado y captura.
+
+### Discusión de resultados
 
 Los resultados son consistentes con una fase de prototipo: el sistema ya discrimina clases útiles en condiciones controladas y permite validar decisiones de arquitectura (captura, preprocesado, tareas FreeRTOS e inferencia). La principal debilidad aparece cuando baja la energía de señal o aumenta la variabilidad de ejecución, donde crecen las confusiones y falsos positivos.
 
 En términos de alcance, el sistema cumple su objetivo de clasificación discreta en tiempo real, pero no debe interpretarse aún como afinador de precisión fina. La ausencia de estimación continua de desviación tonal (centésimas) es una limitación estructural del enfoque actual con NanoEdge y marca una frontera clara entre este prototipo y un afinador avanzado comercial.
 
+Como amenaza a la validez externa, conviene subrayar que las pruebas se han realizado en condiciones de prototipado controladas y con un conjunto de clases limitado. Por tanto, la extrapolación a contextos de uso más variados (distintos instrumentos, técnicas y entornos físicos) requiere campañas adicionales de captura y validación. Esta limitación no invalida los resultados actuales, pero sí acota su interpretación.
+
+### Análisis cualitativo ampliado de resultados
+
+En las sesiones de prueba se observó que la transición entre estados estables suele ser más crítica que el reconocimiento en estado sostenido. Cuando una nota mantiene energía suficiente en la ventana temporal, la clasificación tiende a estabilizarse. En cambio, los ataques iniciales y cambios rápidos de ejecución introducen componentes transitorias que pueden acercar temporalmente la señal a regiones ambiguas para el modelo.
+
+Este comportamiento sugiere que una parte relevante de la mejora futura no pasa exclusivamente por cambiar de algoritmo, sino por refinar la representación temporal de entrada. Estrategias como ventanas con solapamiento adaptativo, filtrado de transitorios espurios o reglas de postprocesado temporal podrían reducir oscilaciones de clase sin comprometer la latencia de respuesta.
+
+Desde la perspectiva de experiencia de usuario, el sistema actual ya ofrece utilidad en sesiones de validación y práctica técnica controlada, especialmente al proporcionar una lectura rápida de clase detectada. No obstante, para un uso más exigente sería recomendable incorporar indicadores de confianza y mecanismos de suavizado temporal que hagan la salida más interpretable en situaciones dinámicas.
+
+En resumen, los resultados de pruebas apoyan la viabilidad del enfoque en su alcance actual y aportan una hoja de ruta clara de mejora: robustecer la fase de entrada y estabilizar la capa de salida antes de ampliar resolución musical o integrar funcionalidades más avanzadas.
+
 ---
 
-## 13. Planificación temporal
+## Planificación temporal
 
-### 13.1 Fases del proyecto
+### Fases del proyecto
 
 Dedicación total estimada del proyecto (desarrollo): **~300 horas**.
 
@@ -584,25 +677,14 @@ Dedicación total estimada del proyecto (desarrollo): **~300 horas**.
 | H6 | Redacción técnica de memoria y documentación | 20 | 6.7% | 280-300 |
 | **TOTAL** |  | **300** | **100%** | 0-300 |
 
-### 13.2 Representación gráfica
+La distribución refleja una realidad habitual en proyectos de I+D aplicada: las fases de exploración y adquisición de datos concentran gran parte del esfuerzo antes de que la integración final gane inercia. En aiBass, esta dinámica se observa con claridad en el peso de H1-H3, que reúnen la mayor incertidumbre técnica del proyecto.
 
-**Diagrama de Gantt (escala en horas acumuladas, sin fechas):**
-
-```text
-Escala horizontal: 0h ───────────────────────────────────────────────────── 300h
-
-H1  Investigación Rust+Embassy   [0 ──────────────────────── 100]
-H2  Adquisición de datos         [100 ─────────── 158]
-H3  Entrenamiento IA             [158 ────────── 210]
-H4  Integración embebida         [210 ──────── 252]
-H5  Pruebas y ajuste             [252 ───── 280]
-H6  Redacción memoria            [280 ─── 300]
-```
+### Diagrama de Gantt
 
 **Figura 10. Diagrama de Gantt del proyecto (en horas acumuladas).**  
 Insertar en Google Docs una versión visual del Gantt anterior con barras horizontales por hito (H1-H6).
 
-### 13.3 Análisis temporal
+### Análisis temporal
 
 La fase de mayor peso temporal fue **H1 (100 h, 33.3%)**, dedicada a investigar la viabilidad de una implementación en Rust con Embassy. Aunque esta línea no se mantuvo en la solución final, concentró una parte relevante del esfuerzo por curva de aprendizaje, evaluación de herramientas y pruebas de integración.
 
@@ -610,11 +692,29 @@ El segundo bloque en tiempo fue la preparación de datos (**H2, 58 h**), seguido
 
 La integración en firmware y salida serie (**H4, 42 h**) supuso menos carga que las fases exploratorias iniciales, al apoyarse en una arquitectura ya definida. Las últimas fases (**H5-H6**) consumieron menos horas al centrarse en consolidación, validación y redacción, con menor incertidumbre técnica que en etapas anteriores.
 
+Desde el punto de vista de gestión de riesgos temporales, el principal aprendizaje fue que anticipar una fase de investigación temprana permitió absorber incertidumbre sin comprometer el cierre funcional. Aunque esa fase derivó en una alternativa descartada, redujo el riesgo de cambios tardíos de arquitectura y aportó criterios sólidos para priorizar tareas en la segunda mitad del proyecto.
+
+### Riesgos temporales y mitigación aplicada
+
+| Riesgo temporal detectado | Impacto potencial | Mitigación aplicada |
+|---|---|---|
+| Prolongar en exceso la exploración Rust/Embassy | Retraso del prototipo final funcional | Cierre explícito de fase exploratoria y retorno a línea principal en C/STM32 |
+| Dataset insuficiente o desequilibrado | Iteraciones extra de entrenamiento con baja mejora | Protocolo de captura por bloques y revisión de etiquetado antes de integrar |
+| Acoplamiento excesivo de firmware | Coste alto de cambios tardíos | Reorganización por tareas con FreeRTOS y separación de responsabilidades |
+| Dependencia de una única condición de prueba | Resultados poco generalizables | Repetición de sesiones y pruebas con variación de ataque/entorno |
+| Sobrecarga de redacción al final del proyecto | Cierre documental débil | Estructuración temprana de memoria y consolidación progresiva de evidencias |
+
+La gestión de estos riesgos no eliminó completamente la incertidumbre, pero sí permitió que el proyecto mantuviera una trayectoria de cierre realista. En particular, la decisión de acotar alcance funcional en momentos clave evitó que el calendario se viera comprometido por objetivos secundarios no críticos para la defensa técnica del prototipo.
+
 ---
 
-## 14. Costes
+## Costes
 
-### 14.1 Coste de materiales (prototipo)
+### Objetivo del apartado
+
+Esta sección pretende estimar el esfuerzo económico del proyecto distinguiendo claramente coste material y coste de desarrollo. El propósito no es construir un plan financiero industrial completo, sino ofrecer una referencia coherente de viabilidad para el alcance académico y de prototipado.
+
+### Coste de materiales (prototipo)
 
 | Concepto | Unidades | Coste unitario | Subtotal |
 |---|---:|---:|---:|
@@ -623,7 +723,9 @@ La integración en firmware y salida serie (**H4, 42 h**) supuso menos carga que
 | Material auxiliar de montaje (cinta, fijación, consumibles) | 1 | 4.00 € | 4.00 € |
 | **TOTAL MATERIAL** |  |  | **60.00 €** |
 
-### 14.2 Coste de personal
+Aunque el coste material directo es reducido, su relevancia en este TFG es estratégica: disponer de una plataforma integrada con sensórica y depuración embebida permitió acortar tiempos de iteración, lo que impacta más en el resultado final que un posible ahorro marginal en hardware alternativo de menor soporte.
+
+### Coste de personal
 
 Para estimar el coste de personal se utiliza una métrica equivalente a **COCOMO simple** basada en personas-mes.
 
@@ -642,11 +744,15 @@ Suposiciones de cálculo:
 | Coste mensual por persona | **2,100 €** |
 | **TOTAL PERSONAL (2.00 × 2,100)** | **4,200.00 €** |
 
-### 14.3 Coste total de prototipo
+La estimación de personal incluye tanto actividades con resultado implementado como fases de investigación finalmente descartadas. Esta forma de cómputo es intencionada, ya que refleja el coste real de ingeniería del proyecto y evita subestimar esfuerzo al excluir trabajo exploratorio que fue necesario para tomar decisiones técnicas fundamentadas.
+
+### Coste total de prototipo
 
 **Coste prototipo = Coste material + Coste personal = 60.00 € + 4,200.00 € = 4,260.00 €**
 
-### 14.4 Estimación de producción en serie
+Este resultado confirma que, en proyectos de estas características, el coste dominante no está en el hardware de laboratorio sino en el tiempo de desarrollo. Por ello, mejorar reutilización de componentes software y acelerar ciclos de validación tiene un impacto económico mayor que optimizaciones menores en consumibles.
+
+### Estimación de producción en serie
 
 Estimación para una tirada de **1,500 unidades**, aplicando un descuento de material del **18%** y un margen comercial del **25%**.
 
@@ -661,9 +767,21 @@ Estimación para una tirada de **1,500 unidades**, aplicando un descuento de mat
 | Margen de beneficio aplicado | **25%** |
 | **Precio final estimado de venta al público por unidad** | **54.75 €** |
 
+La estimación en serie debe interpretarse únicamente como ejercicio preliminar de viabilidad y no como presupuesto industrial cerrado. Para una transición real a producto serían necesarios costes adicionales no modelados en detalle en esta memoria (industrialización electrónica, certificaciones, logística, soporte y posventa), que exceden el alcance de un prototipo académico.
+
 ---
 
-## 15. Conclusiones
+## Conclusiones
+
+### Relación con objetivos inicialmente planteados
+
+| Objetivo inicial | Estado | Evidencia |
+|---|---|---|
+| Estudiar posicionamiento del sensor e interfaz FW/SW | Completado | Pruebas en mástil y transición a prueba en amplificador |
+| Construir dataset de muestras | Completado (versión inicial) | Dataset etiquetado para E, A, D, G y ruido/silencio |
+| Diseñar y entrenar IA embebida | Completado (iterativo) | Tres iteraciones de modelo y selección de versión final por equilibrio robustez/latencia |
+| Implementar interfaz de usuario/representación | Parcial | Salida serie de clase detectada (a falta de pantalla LCD o alternativa) |
+| Evaluar desempeño de la IA | Completado (nivel prototipo) | Exactitud global en entorno controlado y pruebas de robustez con variaciones de ejecución |
 
 El proyecto aiBass ha permitido construir una base funcional para detección de notas en bajo mediante sensórica inercial e inferencia embebida. En su estado actual, se ha logrado la clasificación de cinco clases de interés (E, A, D, G y ruido/silencio), junto con la visualización de resultados en serie para validación operativa.
 
@@ -673,47 +791,65 @@ Desde el punto de vista de ingeniería, uno de los aprendizajes clave ha sido la
 
 A nivel personal y formativo, el proyecto ha reforzado competencias de diseño experimental, depuración en sistemas embebidos y toma de decisiones bajo restricciones reales de tiempo. La principal dificultad fue equilibrar ambición técnica con cierre funcional del TFG, especialmente al decidir qué líneas mantener y cuáles posponer. La valoración global es positiva: se ha establecido una base funcional reproducible, técnicamente defendible y con margen claro de evolución en futuras iteraciones.
 
+En términos de contribución académica, aiBass demuestra que es posible construir un prototipo de clasificación musical embebida con recursos moderados y una arquitectura escalable. Aunque el resultado actual no cubre todos los escenarios de uso de un producto final, sí ofrece una base sólida para continuar con mejoras de resolución tonal, robustez y experiencia de usuario sin partir de cero.
+
+Como cierre, el proyecto deja una doble aportación: un resultado funcional tangible y un marco de trabajo técnico para iteraciones futuras. Esta combinación entre implementación y aprendizaje estructurado es especialmente valiosa en un TFG, donde no solo importa el artefacto final sino también la calidad del proceso de ingeniería que lo sustenta.
+
 ---
 
-## 16. Trabajo futuro
+## Trabajo futuro
 
 Como evolución natural de aiBass, se plantean varias líneas de continuidad que permitirían pasar de un prototipo funcional a un sistema más sólido y cercano a uso real.
 
-### 16.1 Ampliación de clases y resolución musical
+### Ampliación de clases y resolución musical
 
 El sistema actual distingue E, A, D, G y ruido/silencio. Una extensión directa es aumentar la resolución de clasificación para incluir más notas, diferentes posiciones en el diapasón y, potencialmente, técnicas de ejecución (ataque, palm mute, etc.). Esta ampliación exigiría un dataset más amplio y equilibrado, además de una revisión del modelo para mantener robustez.
 
 En paralelo, si se quiere llegar a funcionalidades de afinación fina en centésimas, será necesario complementar o sustituir el enfoque de clasificación discreta actual por una estrategia que estime desviación continua de pitch.
 
-### 16.2 Mejora de robustez y generalización
+### Mejora de robustez y generalización
 
 Se propone reforzar la robustez frente a variaciones de interpretación, dinámica de ataque, instrumento y entorno físico. Para ello, sería útil diseñar campañas de captura en distintas condiciones, introducir validación cruzada más exigente y aplicar técnicas de regularización/normalización orientadas a mejorar generalización fuera del entorno de entrenamiento.
 
-### 16.3 Optimización del montaje físico del sensor
+### Optimización del montaje físico del sensor
 
 La evolución del proyecto ha mostrado que el punto de montaje impacta fuertemente en la calidad de señal. Como trabajo futuro, se plantea un estudio sistemático de ubicaciones con criterios cuantitativos de discriminación entre clases, junto con una solución mecánica estable de fijación para reducir variaciones no controladas entre sesiones.
 
-### 16.4 Evolución de la interfaz de usuario
+### Evolución de la interfaz de usuario
 
 La salida serie actual es suficiente para depuración, pero limitada para uso final. Una línea de mejora sería desarrollar una interfaz de mayor nivel (aplicación de escritorio o móvil) que muestre historial de detecciones, métricas de confianza y herramientas de apoyo al aprendizaje o afinación.
 
-### 16.5 Integración musical avanzada (MIDI/DAW)
+### Integración musical avanzada (MIDI/DAW)
 
 Una evolución especialmente interesante es mapear la clasificación a eventos MIDI para controlar sintetizadores o integrarse con estaciones de audio digital (DAW). Esta línea abriría aplicaciones directas en producción musical y permitiría evaluar el sistema en contextos de interpretación en tiempo real.
 
-### 16.6 Revisión tecnológica de la línea Rust + Embassy
+### Diseño de placa a medida y carcasa
+
+Una línea de evolución prioritaria consiste en reemplazar el uso del Discovery kit por una **placa específica de aiBass** que incluya únicamente los bloques necesarios para la funcionalidad final. Esta reducción de componentes permitiría disminuir tamaño, simplificar alimentación y ajustar mejor el diseño eléctrico a los requisitos reales del sistema, evitando sobrecostes y complejidad heredada de una placa pensada para desarrollo generalista.
+
+De forma complementaria, se plantea el diseño de una **carcasa dedicada**, preferiblemente mediante impresión 3D en iteraciones iniciales. Esta carcasa tendría un doble objetivo: proteger el hardware y ofrecer una integración física más estable y cómoda en contexto musical real. Una solución mecánica bien diseñada también contribuiría a mejorar repetibilidad de pruebas al reducir movimientos no deseados del conjunto sensor-electrónica.
+
+### Revisión tecnológica de la línea Rust + Embassy
 
 Aunque la investigación inicial en Rust + Embassy se descartó en esta etapa por coste temporal, actualmente ya se dispone de una base técnica más sólida en ese ecosistema. Por ello, se plantea como línea futura prioritaria una reimplementación progresiva del firmware en Rust/Embassy, al menos en módulos críticos de adquisición y comunicaciones.
 
 Esta propuesta está respaldada por experiencia reciente en otro proyecto del autor, donde se realizó una comparación directa **C/FreeRTOS vs Rust/Embassy** sobre una aplicación equivalente de UART. En esa comparación se observaron mejoras relevantes en huella de memoria y tamaño binario para la implementación en Rust, lo que refuerza su interés para futuras iteraciones de aiBass (véase referencia bibliográfica específica al documento [*COMPARISON.md*](https://github.com/AlfEspadero/SETR2-practica4-rust/blob/main/COMPARISON.md)).
 
-### 16.7 Validación con usuarios
+### Validación con usuarios
 
 Finalmente, se propone realizar pruebas con bajistas de distintos niveles para medir utilidad percibida, facilidad de uso y estabilidad en escenarios reales de práctica. Esta validación serviría para priorizar mejoras con impacto directo en la experiencia de usuario.
 
+### Hoja de ruta evolutiva propuesta
+
+Como síntesis operativa del trabajo futuro, se plantea una evolución en cuatro etapas progresivas. En una primera etapa, el foco estaría en robustez: ampliar capturas, revisar preprocesado y estabilizar salida en escenarios más variados. En una segunda etapa, se abordaría la experiencia de uso, incorporando interfaz más rica y métricas de confianza.
+
+La tercera etapa estaría orientada a integración musical avanzada, especialmente salida MIDI y pruebas en flujos de trabajo con DAW. Por último, una cuarta etapa combinaría industrialización del prototipo (placa específica + carcasa) con revisión tecnológica de firmware en Rust/Embassy para evaluar si la madurez actual del ecosistema mejora la relación coste/beneficio observada inicialmente.
+
+Esta hoja de ruta permite ordenar prioridades y evitar saltos de complejidad prematuros. También facilita transformar el trabajo futuro en hitos verificables, manteniendo continuidad con la arquitectura y decisiones técnicas ya consolidadas en la versión actual del proyecto.
+
 ---
 
-## 17. Bibliografía
+## Bibliografía
 
 Espadero García, A. (s. f.). *aiBass* [Repositorio de software]. GitHub. Recuperado el 9 de mayo de 2026, de https://github.com/AlfEspadero/aiBass
 
@@ -755,7 +891,7 @@ TC Electronic. (s. f.). *PolyTune 3 Polyphonic Tuner*. Recuperado el 12 de mayo 
 
 ---
 
-## 18. Anexos
+## Anexos
 
 ### Anexo A — Glosario
 
@@ -792,10 +928,3 @@ Incluir en este anexo:
 4. Tabla extendida de métricas por iteración de modelo.
 5. Fotografías del montaje físico usado en las pruebas.
 6. [Report NanoEdge AI Studio](assets/neai_report.pdf)
-
----
-
-## Checklist de sustituciones antes de entrega
-
-- Figuras insertadas y numeradas.
-- Revisión ortográfica y de estilo final.
